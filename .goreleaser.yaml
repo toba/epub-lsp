@@ -1,0 +1,41 @@
+version: 2
+
+builds:
+  - id: epub-lsp
+    main: ./cmd/epub-lsp
+    binary: epub-lsp
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+
+archives:
+  - id: epub-lsp
+    builds:
+      - epub-lsp
+    formats:
+      - tar.gz
+    name_template: "epub-lsp_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
