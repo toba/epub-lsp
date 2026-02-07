@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/toba/epub-lsp/internal/epub"
+	"github.com/toba/epub-lsp/internal/epub/testutil"
 )
 
 func TestValidXHTML(t *testing.T) {
@@ -22,7 +23,12 @@ func TestValidXHTML(t *testing.T) {
 	if len(diags) != 0 {
 		t.Errorf("expected no diagnostics for valid XHTML, got %d:", len(diags))
 		for _, d := range diags {
-			t.Errorf("  [%s] %s: %s", d.Code, severityName(d.Severity), d.Message)
+			t.Errorf(
+				"  [%s] %s: %s",
+				d.Code,
+				testutil.SeverityName(d.Severity),
+				d.Message,
+			)
 		}
 	}
 }
@@ -37,7 +43,7 @@ func TestMissingXHTMLNamespace(t *testing.T) {
 	v := &Validator{}
 	diags := v.Validate("chapter.xhtml", content, nil)
 
-	if !hasCode(diags, "HTM_049") {
+	if !testutil.HasCode(diags, "HTM_049") {
 		t.Error("expected HTM_049 for missing XHTML namespace")
 	}
 }
@@ -52,7 +58,7 @@ func TestLangMismatch(t *testing.T) {
 	v := &Validator{}
 	diags := v.Validate("chapter.xhtml", content, nil)
 
-	if !hasCode(diags, "HTM_017") {
+	if !testutil.HasCode(diags, "HTM_017") {
 		t.Error("expected HTM_017 for lang mismatch")
 	}
 }
@@ -113,29 +119,5 @@ func TestMalformedXHTML(t *testing.T) {
 
 	if len(diags) == 0 {
 		t.Error("expected diagnostics for malformed XHTML")
-	}
-}
-
-// helpers
-
-func hasCode(diags []epub.Diagnostic, code string) bool {
-	for _, d := range diags {
-		if d.Code == code {
-			return true
-		}
-	}
-	return false
-}
-
-func severityName(s int) string {
-	switch s {
-	case epub.SeverityError:
-		return "Error"
-	case epub.SeverityWarning:
-		return "Warning"
-	case epub.SeverityInfo:
-		return "Info"
-	default:
-		return "Unknown"
 	}
 }

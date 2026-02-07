@@ -303,17 +303,36 @@ func processDiagnosticNotification(
 			filesToValidate = storage.RawFiles
 		}
 
+		// Resolve file types before concurrent validation
 		for uri, content := range filesToValidate {
-			fileType := storage.FileTypes[uri]
-			if fileType == epub.FileTypeUnknown {
-				fileType = epub.DetectFileType(uri, content)
-				storage.FileTypes[uri] = fileType
+			if storage.FileTypes[uri] == epub.FileTypeUnknown {
+				storage.FileTypes[uri] = epub.DetectFileType(uri, content)
 			}
+		}
 
-			diags := registry.ValidateFile(uri, content, fileType, ctx)
-			storage.Diagnostics[uri] = diags
+		// Validate files concurrently
+		type validationResult struct {
+			uri   string
+			diags []epub.Diagnostic
+		}
+		results := make(chan validationResult, len(filesToValidate))
 
-			publishDiagnostics(notification, uri, diags, muStdout)
+		var wg sync.WaitGroup
+		for uri, content := range filesToValidate {
+			wg.Go(func() {
+				diags := registry.ValidateFile(uri, content, storage.FileTypes[uri], ctx)
+				results <- validationResult{uri: uri, diags: diags}
+			})
+		}
+
+		go func() {
+			wg.Wait()
+			close(results)
+		}()
+
+		for r := range results {
+			storage.Diagnostics[r.uri] = r.diags
+			publishDiagnostics(notification, r.uri, r.diags, muStdout)
 		}
 	}
 }

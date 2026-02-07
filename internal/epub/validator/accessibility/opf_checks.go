@@ -2,8 +2,8 @@ package accessibility
 
 import (
 	"github.com/toba/epub-lsp/internal/epub"
-	"github.com/toba/epub-lsp/internal/epub/parser"
 	"github.com/toba/epub-lsp/internal/epub/validator"
+	"github.com/toba/epub-lsp/internal/epub/validator/opf"
 )
 
 // OPFAccessibilityValidator checks OPF-level accessibility requirements
@@ -19,17 +19,7 @@ func (v *OPFAccessibilityValidator) Validate(
 	content []byte,
 	_ *validator.WorkspaceContext,
 ) []epub.Diagnostic {
-	root, xmlDiags := parser.Parse(content)
-	if len(xmlDiags) > 0 {
-		return nil
-	}
-
-	pkg := root.FindFirst("package")
-	if pkg == nil {
-		return nil
-	}
-
-	metadata := pkg.FindFirst("metadata")
+	_, metadata := opf.ParseOPFMetadata(content)
 	if metadata == nil {
 		return nil
 	}
@@ -38,10 +28,8 @@ func (v *OPFAccessibilityValidator) Validate(
 	pos := epub.ByteOffsetToPosition(content, int(metadata.Offset))
 	rng := epub.Range{Start: pos, End: pos}
 
-	dcNS := "http://purl.org/dc/elements/1.1/"
-
 	// epub-title: must have dc:title
-	titles := metadata.FindAllNS(dcNS, "title")
+	titles := metadata.FindAllNS(epub.NSDC, "title")
 	if len(titles) == 0 {
 		diags = append(diags, epub.Diagnostic{
 			Code:     "epub-title",
@@ -53,7 +41,7 @@ func (v *OPFAccessibilityValidator) Validate(
 	}
 
 	// epub-lang: must have dc:language
-	languages := metadata.FindAllNS(dcNS, "language")
+	languages := metadata.FindAllNS(epub.NSDC, "language")
 	if len(languages) == 0 {
 		diags = append(diags, epub.Diagnostic{
 			Code:     "epub-lang",

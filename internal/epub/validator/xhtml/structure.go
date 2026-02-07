@@ -12,14 +12,8 @@ func validateStructure(content []byte, root *parser.XMLNode) []epub.Diagnostic {
 	imgs := root.FindAll("img")
 	for _, img := range imgs {
 		if !img.HasAttr("alt") {
-			pos := epub.ByteOffsetToPosition(content, int(img.Offset))
-			diags = append(diags, epub.Diagnostic{
-				Code:     "HTM_008",
-				Severity: epub.SeverityWarning,
-				Message:  "<img> element missing alt attribute",
-				Source:   source,
-				Range:    epub.Range{Start: pos, End: pos},
-			})
+			diags = append(diags, epub.NewDiag(content, int(img.Offset), source).
+				Code("HTM_008").Warning("<img> element missing alt attribute").Build())
 		}
 	}
 

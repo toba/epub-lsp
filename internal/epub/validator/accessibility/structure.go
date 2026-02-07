@@ -90,15 +90,11 @@ func checkEpubTypeRoles(content []byte, root *parser.XMLNode) []epub.Diagnostic 
 				continue
 			}
 			actualRole := node.Attr("role")
-			if actualRole == "" || !containsToken(actualRole, expectedRole) {
-				pos := epub.ByteOffsetToPosition(content, int(node.Offset))
-				diags = append(diags, epub.Diagnostic{
-					Code:     "epub-type-has-matching-role",
-					Severity: epub.SeverityWarning,
-					Message:  "epub:type=\"" + token + "\" should have role=\"" + expectedRole + "\"",
-					Source:   source,
-					Range:    epub.Range{Start: pos, End: pos},
-				})
+			if actualRole == "" || !epub.ContainsToken(actualRole, expectedRole) {
+				diags = append(diags, epub.NewDiag(content, int(node.Offset), source).
+					Code("epub-type-has-matching-role").
+					Warning("epub:type=\""+token+"\" should have role=\""+expectedRole+"\"").
+					Build())
 			}
 		}
 	})
@@ -109,7 +105,7 @@ func checkEpubTypeRoles(content []byte, root *parser.XMLNode) []epub.Diagnostic 
 func checkPageBreakLabels(content []byte, root *parser.XMLNode) []epub.Diagnostic {
 	var diags []epub.Diagnostic
 	walkEpubTypes(root, func(node *parser.XMLNode, epubType string) {
-		if !containsToken(epubType, "pagebreak") {
+		if !epub.ContainsToken(epubType, "pagebreak") {
 			return
 		}
 		// Must have aria-label, title, or text content
@@ -118,14 +114,10 @@ func checkPageBreakLabels(content []byte, root *parser.XMLNode) []epub.Diagnosti
 		text := strings.TrimSpace(node.CharData)
 
 		if ariaLabel == "" && title == "" && text == "" {
-			pos := epub.ByteOffsetToPosition(content, int(node.Offset))
-			diags = append(diags, epub.Diagnostic{
-				Code:     "pagebreak-label",
-				Severity: epub.SeverityWarning,
-				Message:  "pagebreak element missing accessible label (aria-label, title, or text content)",
-				Source:   source,
-				Range:    epub.Range{Start: pos, End: pos},
-			})
+			diags = append(diags, epub.NewDiag(content, int(node.Offset), source).
+				Code("pagebreak-label").
+				Warning("pagebreak element missing accessible label (aria-label, title, or text content)").
+				Build())
 		}
 	})
 	return diags
@@ -142,18 +134,10 @@ func checkHeadingLevels(content []byte, root *parser.XMLNode) []epub.Diagnostic 
 		prev := headings[i-1]
 		curr := headings[i]
 		if curr.level > prev.level+1 {
-			pos := epub.ByteOffsetToPosition(content, int(curr.offset))
-			diags = append(diags, epub.Diagnostic{
-				Code:     "heading-order",
-				Severity: epub.SeverityWarning,
-				Message: "heading level skipped from h" + strconv.Itoa(
-					prev.level,
-				) + " to h" + strconv.Itoa(
-					curr.level,
-				),
-				Source: source,
-				Range:  epub.Range{Start: pos, End: pos},
-			})
+			diags = append(diags, epub.NewDiag(content, int(curr.offset), source).
+				Code("heading-order").
+				Warning("heading level skipped from h"+strconv.Itoa(prev.level)+" to h"+strconv.Itoa(curr.level)).
+				Build())
 		}
 	}
 
@@ -203,14 +187,10 @@ func checkTableCaptions(content []byte, root *parser.XMLNode) []epub.Diagnostic 
 		ariaLabelledBy := table.Attr("aria-labelledby")
 
 		if caption == nil && ariaLabel == "" && ariaLabelledBy == "" {
-			pos := epub.ByteOffsetToPosition(content, int(table.Offset))
-			diags = append(diags, epub.Diagnostic{
-				Code:     "table-caption",
-				Severity: epub.SeverityWarning,
-				Message:  "<table> missing <caption>, aria-label, or aria-labelledby",
-				Source:   source,
-				Range:    epub.Range{Start: pos, End: pos},
-			})
+			diags = append(diags, epub.NewDiag(content, int(table.Offset), source).
+				Code("table-caption").
+				Warning("<table> missing <caption>, aria-label, or aria-labelledby").
+				Build())
 		}
 	}
 
@@ -239,51 +219,19 @@ func checkFormLabels(content []byte, root *parser.XMLNode) []epub.Diagnostic {
 			continue
 		}
 
-		id := input.Attr("id")
-		ariaLabel := input.Attr("aria-label")
-		ariaLabelledBy := input.Attr("aria-labelledby")
-		title := input.Attr("title")
-
-		hasLabel := ariaLabel != "" || ariaLabelledBy != "" || title != ""
-		if !hasLabel && id != "" {
-			hasLabel = labelFor[id]
-		}
-
-		if !hasLabel {
-			pos := epub.ByteOffsetToPosition(content, int(input.Offset))
-			diags = append(diags, epub.Diagnostic{
-				Code:     "input-label",
-				Severity: epub.SeverityWarning,
-				Message:  "<input> missing associated label",
-				Source:   source,
-				Range:    epub.Range{Start: pos, End: pos},
-			})
+		if !hasAssociatedLabel(input, labelFor) {
+			diags = append(diags, epub.NewDiag(content, int(input.Offset), source).
+				Code("input-label").Warning("<input> missing associated label").Build())
 		}
 	}
 
 	// Check select and textarea too
 	for _, tagName := range []string{"select", "textarea"} {
-		elems := root.FindAll(tagName)
-		for _, elem := range elems {
-			id := elem.Attr("id")
-			ariaLabel := elem.Attr("aria-label")
-			ariaLabelledBy := elem.Attr("aria-labelledby")
-			title := elem.Attr("title")
-
-			hasLabel := ariaLabel != "" || ariaLabelledBy != "" || title != ""
-			if !hasLabel && id != "" {
-				hasLabel = labelFor[id]
-			}
-
-			if !hasLabel {
-				pos := epub.ByteOffsetToPosition(content, int(elem.Offset))
-				diags = append(diags, epub.Diagnostic{
-					Code:     "input-label",
-					Severity: epub.SeverityWarning,
-					Message:  "<" + tagName + "> missing associated label",
-					Source:   source,
-					Range:    epub.Range{Start: pos, End: pos},
-				})
+		for _, elem := range root.FindAll(tagName) {
+			if !hasAssociatedLabel(elem, labelFor) {
+				diags = append(diags, epub.NewDiag(content, int(elem.Offset), source).
+					Code("input-label").
+					Warning("<"+tagName+"> missing associated label").Build())
 			}
 		}
 	}
@@ -291,10 +239,23 @@ func checkFormLabels(content []byte, root *parser.XMLNode) []epub.Diagnostic {
 	return diags
 }
 
+// hasAssociatedLabel reports whether an element has an accessible label
+// via aria-label, aria-labelledby, title, or a matching label[for].
+func hasAssociatedLabel(elem *parser.XMLNode, labelFor map[string]bool) bool {
+	if elem.Attr("aria-label") != "" || elem.Attr("aria-labelledby") != "" ||
+		elem.Attr("title") != "" {
+		return true
+	}
+	if id := elem.Attr("id"); id != "" {
+		return labelFor[id]
+	}
+	return false
+}
+
 // walkEpubTypes calls fn for every element with an epub:type attribute.
 func walkEpubTypes(node *parser.XMLNode, fn func(node *parser.XMLNode, epubType string)) {
 	for _, child := range node.Children {
-		epubType := child.AttrNS(epubNS, "type")
+		epubType := child.AttrNS(epub.NSEpub, "type")
 		if epubType != "" {
 			fn(child, epubType)
 		}

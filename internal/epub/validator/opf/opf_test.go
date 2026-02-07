@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/toba/epub-lsp/internal/epub"
+	"github.com/toba/epub-lsp/internal/epub/testutil"
 )
 
 func TestValidOPF(t *testing.T) {
@@ -28,7 +29,12 @@ func TestValidOPF(t *testing.T) {
 	if len(diags) != 0 {
 		t.Errorf("expected no diagnostics for valid OPF, got %d:", len(diags))
 		for _, d := range diags {
-			t.Errorf("  [%s] %s: %s", d.Code, severityName(d.Severity), d.Message)
+			t.Errorf(
+				"  [%s] %s: %s",
+				d.Code,
+				testutil.SeverityName(d.Severity),
+				d.Message,
+			)
 		}
 	}
 }
@@ -49,10 +55,10 @@ func TestMissingMetadataFields(t *testing.T) {
 	v := &Validator{}
 	diags := v.Validate("package.opf", content, nil)
 
-	codes := diagCodes(diags)
-	expectCode(t, codes, "OPF_030") // missing dc:identifier
-	expectCode(t, codes, "OPF_032") // missing dc:title
-	expectCode(t, codes, "OPF_034") // missing dc:language
+	codes := testutil.DiagCodes(diags)
+	testutil.ExpectCode(t, codes, "OPF_030") // missing dc:identifier
+	testutil.ExpectCode(t, codes, "OPF_032") // missing dc:title
+	testutil.ExpectCode(t, codes, "OPF_034") // missing dc:language
 }
 
 func TestUniqueIdentifierMismatch(t *testing.T) {
@@ -70,8 +76,8 @@ func TestUniqueIdentifierMismatch(t *testing.T) {
 	v := &Validator{}
 	diags := v.Validate("package.opf", content, nil)
 
-	codes := diagCodes(diags)
-	expectCode(t, codes, "OPF_031")
+	codes := testutil.DiagCodes(diags)
+	testutil.ExpectCode(t, codes, "OPF_031")
 }
 
 func TestMissingSpine(t *testing.T) {
@@ -88,8 +94,8 @@ func TestMissingSpine(t *testing.T) {
 	v := &Validator{}
 	diags := v.Validate("package.opf", content, nil)
 
-	codes := diagCodes(diags)
-	expectCode(t, codes, "OPF_019")
+	codes := testutil.DiagCodes(diags)
+	testutil.ExpectCode(t, codes, "OPF_019")
 }
 
 func TestSpineReferencesNonexistentManifestItem(t *testing.T) {
@@ -111,8 +117,8 @@ func TestSpineReferencesNonexistentManifestItem(t *testing.T) {
 	v := &Validator{}
 	diags := v.Validate("package.opf", content, nil)
 
-	codes := diagCodes(diags)
-	expectCode(t, codes, "OPF_003")
+	codes := testutil.DiagCodes(diags)
+	testutil.ExpectCode(t, codes, "OPF_003")
 }
 
 func TestManifestWarnings(t *testing.T) {
@@ -164,37 +170,5 @@ func TestMalformedXML(t *testing.T) {
 
 	if len(diags) == 0 {
 		t.Error("expected diagnostics for malformed XML")
-	}
-}
-
-// helpers
-
-func diagCodes(diags []epub.Diagnostic) map[string]bool {
-	codes := make(map[string]bool)
-	for _, d := range diags {
-		if d.Code != "" {
-			codes[d.Code] = true
-		}
-	}
-	return codes
-}
-
-func expectCode(t *testing.T, codes map[string]bool, code string) {
-	t.Helper()
-	if !codes[code] {
-		t.Errorf("expected diagnostic code %s", code)
-	}
-}
-
-func severityName(s int) string {
-	switch s {
-	case epub.SeverityError:
-		return "Error"
-	case epub.SeverityWarning:
-		return "Warning"
-	case epub.SeverityInfo:
-		return "Info"
-	default:
-		return "Unknown"
 	}
 }

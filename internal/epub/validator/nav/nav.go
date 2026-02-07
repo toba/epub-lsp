@@ -2,18 +2,12 @@
 package nav
 
 import (
-	"strings"
-
 	"github.com/toba/epub-lsp/internal/epub"
 	"github.com/toba/epub-lsp/internal/epub/parser"
 	"github.com/toba/epub-lsp/internal/epub/validator"
 )
 
-const (
-	source  = "epub-nav"
-	epubNS  = "http://www.idpf.org/2007/ops"
-	xhtmlNS = "http://www.w3.org/1999/xhtml"
-)
+const source = "epub-nav"
 
 // Validator validates EPUB navigation documents.
 type Validator struct{}
@@ -50,7 +44,7 @@ func findNavElements(root *parser.XMLNode) []*parser.XMLNode {
 
 // getEpubType returns the epub:type attribute value of a node.
 func getEpubType(node *parser.XMLNode) string {
-	return node.AttrNS(epubNS, "type")
+	return node.AttrNS(epub.NSEpub, "type")
 }
 
 // validateTocNav checks that a <nav epub:type="toc"> element exists and has an <ol>.
@@ -70,30 +64,20 @@ func validateTocNav(content []byte, root *parser.XMLNode) []epub.Diagnostic {
 	if tocNav == nil {
 		// Report at document root
 		html := root.FindFirst("html")
-		var pos epub.Position
+		offset := 0
 		if html != nil {
-			pos = epub.ByteOffsetToPosition(content, int(html.Offset))
+			offset = int(html.Offset)
 		}
-		diags = append(diags, epub.Diagnostic{
-			Code:     "NAV_003",
-			Severity: epub.SeverityError,
-			Message:  `no <nav epub:type="toc"> element found`,
-			Source:   source,
-			Range:    epub.Range{Start: pos, End: pos},
-		})
+		diags = append(diags, epub.NewDiag(content, offset, source).
+			Code("NAV_003").Error(`no <nav epub:type="toc"> element found`).Build())
 		return diags
 	}
 
 	// Check for <ol> inside toc nav
 	ol := tocNav.FindFirst("ol")
 	if ol == nil {
-		pos := epub.ByteOffsetToPosition(content, int(tocNav.Offset))
-		diags = append(diags, epub.Diagnostic{
-			Severity: epub.SeverityWarning,
-			Message:  "toc nav is missing required <ol> element",
-			Source:   source,
-			Range:    epub.Range{Start: pos, End: pos},
-		})
+		diags = append(diags, epub.NewDiag(content, int(tocNav.Offset), source).
+			Warning("toc nav is missing required <ol> element").Build())
 	}
 
 	return diags
@@ -109,15 +93,9 @@ func validateNavLinks(content []byte, root *parser.XMLNode) []epub.Diagnostic {
 		if href == "" {
 			continue
 		}
-		if strings.HasPrefix(href, "http://") || strings.HasPrefix(href, "https://") {
-			pos := epub.ByteOffsetToPosition(content, int(a.Offset))
-			diags = append(diags, epub.Diagnostic{
-				Code:     "NAV_010",
-				Severity: epub.SeverityError,
-				Message:  "nav links to remote resource: " + href,
-				Source:   source,
-				Range:    epub.Range{Start: pos, End: pos},
-			})
+		if epub.IsRemoteURL(href) {
+			diags = append(diags, epub.NewDiag(content, int(a.Offset), source).
+				Code("NAV_010").Error("nav links to remote resource: "+href).Build())
 		}
 	}
 
@@ -144,16 +122,12 @@ func validateNavTypes(content []byte, root *parser.XMLNode) []epub.Diagnostic {
 
 	if !hasPageList && !hasLandmarks {
 		html := root.FindFirst("html")
-		var pos epub.Position
+		offset := 0
 		if html != nil {
-			pos = epub.ByteOffsetToPosition(content, int(html.Offset))
+			offset = int(html.Offset)
 		}
-		diags = append(diags, epub.Diagnostic{
-			Severity: epub.SeverityInfo,
-			Message:  "navigation document has no page-list or landmarks nav",
-			Source:   source,
-			Range:    epub.Range{Start: pos, End: pos},
-		})
+		diags = append(diags, epub.NewDiag(content, offset, source).
+			Info("navigation document has no page-list or landmarks nav").Build())
 	}
 
 	return diags
@@ -208,22 +182,13 @@ func validateTocSpineOrder(
 	// Check that toc hrefs are in non-decreasing spine order
 	lastSpineIdx := -1
 	for _, tocHref := range tocHrefs {
-		// Strip fragment
-		base := tocHref
-		if idx := strings.Index(base, "#"); idx >= 0 {
-			base = base[:idx]
-		}
+		base := epub.StripFragment(tocHref)
 
 		if si, ok := spineIndex[base]; ok {
 			if si < lastSpineIdx {
-				pos := epub.ByteOffsetToPosition(content, int(tocNav.Offset))
-				diags = append(diags, epub.Diagnostic{
-					Code:     "NAV_011",
-					Severity: epub.SeverityWarning,
-					Message:  "TOC link order doesn't match spine order",
-					Source:   source,
-					Range:    epub.Range{Start: pos, End: pos},
-				})
+				diags = append(diags, epub.NewDiag(content, int(tocNav.Offset), source).
+					Code("NAV_011").
+					Warning("TOC link order doesn't match spine order").Build())
 				break
 			}
 			lastSpineIdx = si

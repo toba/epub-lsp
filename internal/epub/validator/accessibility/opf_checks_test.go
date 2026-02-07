@@ -2,6 +2,8 @@ package accessibility
 
 import (
 	"testing"
+
+	"github.com/toba/epub-lsp/internal/epub/testutil"
 )
 
 func TestOPFAccessibility_MissingTitle(t *testing.T) {
@@ -18,7 +20,7 @@ func TestOPFAccessibility_MissingTitle(t *testing.T) {
 	v := &OPFAccessibilityValidator{}
 	diags := v.Validate("package.opf", content, nil)
 
-	expectCode(t, diagCodes(diags), "epub-title")
+	testutil.ExpectCode(t, testutil.DiagCodes(diags), "epub-title")
 }
 
 func TestOPFAccessibility_MissingLanguage(t *testing.T) {
@@ -35,7 +37,7 @@ func TestOPFAccessibility_MissingLanguage(t *testing.T) {
 	v := &OPFAccessibilityValidator{}
 	diags := v.Validate("package.opf", content, nil)
 
-	expectCode(t, diagCodes(diags), "epub-lang")
+	testutil.ExpectCode(t, testutil.DiagCodes(diags), "epub-lang")
 }
 
 func TestOPFAccessibility_Complete(t *testing.T) {

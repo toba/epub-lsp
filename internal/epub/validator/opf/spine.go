@@ -10,14 +10,8 @@ func validateSpine(content []byte, pkg *parser.XMLNode) []epub.Diagnostic {
 
 	spine := pkg.FindFirst("spine")
 	if spine == nil {
-		pos := epub.ByteOffsetToPosition(content, int(pkg.Offset))
-		diags = append(diags, epub.Diagnostic{
-			Code:     "OPF_019",
-			Severity: epub.SeverityError,
-			Message:  "missing required <spine> element",
-			Source:   source,
-			Range:    epub.Range{Start: pos, End: pos},
-		})
+		diags = append(diags, epub.NewDiag(content, int(pkg.Offset), source).
+			Code("OPF_019").Error("missing required <spine> element").Build())
 		return diags
 	}
 
@@ -46,14 +40,10 @@ func validateSpine(content []byte, pkg *parser.XMLNode) []epub.Diagnostic {
 		}
 
 		if !manifestIDs[idref] {
-			pos := epub.ByteOffsetToPosition(content, int(itemref.Offset))
-			diags = append(diags, epub.Diagnostic{
-				Code:     "OPF_003",
-				Severity: epub.SeverityError,
-				Message:  "spine itemref references nonexistent manifest id: \"" + idref + "\"",
-				Source:   source,
-				Range:    epub.Range{Start: pos, End: pos},
-			})
+			diags = append(diags, epub.NewDiag(content, int(itemref.Offset), source).
+				Code("OPF_003").
+				Error("spine itemref references nonexistent manifest id: \""+idref+"\"").
+				Build())
 		}
 	}
 

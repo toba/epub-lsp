@@ -127,16 +127,8 @@ func Parse(content []byte) (*XMLNode, []epub.Diagnostic) {
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			pos := epub.ByteOffsetToPosition(content, int(offset))
-			diags = append(diags, epub.Diagnostic{
-				Severity: epub.SeverityError,
-				Message:  "XML well-formedness error: " + err.Error(),
-				Source:   "epub-xml",
-				Range: epub.Range{
-					Start: pos,
-					End:   pos,
-				},
-			})
+			diags = append(diags, epub.NewDiag(content, int(offset), "epub-xml").
+				Error("XML well-formedness error: "+err.Error()).Build())
 			break
 		}
 

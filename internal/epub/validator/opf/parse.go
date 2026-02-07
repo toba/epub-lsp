@@ -3,6 +3,7 @@ package opf
 import (
 	"strings"
 
+	"github.com/toba/epub-lsp/internal/epub"
 	"github.com/toba/epub-lsp/internal/epub/parser"
 	"github.com/toba/epub-lsp/internal/epub/validator"
 )
@@ -61,15 +62,30 @@ func ParseManifest(content []byte) *validator.ManifestInfo {
 	return info
 }
 
+// ParseOPFMetadata parses OPF content and returns the package and metadata nodes.
+// Returns nil, nil if parsing fails or the expected elements are missing.
+func ParseOPFMetadata(content []byte) (pkg, metadata *parser.XMLNode) {
+	root, diags := parser.Parse(content)
+	if len(diags) > 0 {
+		return nil, nil
+	}
+	pkg = root.FindFirst("package")
+	if pkg == nil {
+		return nil, nil
+	}
+	metadata = pkg.FindFirst("metadata")
+	return pkg, metadata
+}
+
 func parseMetadataInfo(metadata *parser.XMLNode, meta *validator.MetadataInfo) {
 	// Check dc:title and dc:language
-	if len(metadata.FindAllNS(dcNS, "title")) > 0 {
+	if len(metadata.FindAllNS(epub.NSDC, "title")) > 0 {
 		meta.HasTitle = true
 	}
-	if len(metadata.FindAllNS(dcNS, "language")) > 0 {
+	if len(metadata.FindAllNS(epub.NSDC, "language")) > 0 {
 		meta.HasLanguage = true
 	}
-	if len(metadata.FindAllNS(dcNS, "source")) > 0 {
+	if len(metadata.FindAllNS(epub.NSDC, "source")) > 0 {
 		meta.HasDCSource = true
 	}
 

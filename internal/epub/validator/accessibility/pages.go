@@ -7,9 +7,8 @@ import (
 	"github.com/toba/epub-lsp/internal/epub"
 	"github.com/toba/epub-lsp/internal/epub/parser"
 	"github.com/toba/epub-lsp/internal/epub/validator"
+	"github.com/toba/epub-lsp/internal/epub/validator/opf"
 )
-
-const epubNS = "http://www.idpf.org/2007/ops"
 
 // PageValidator checks page navigation consistency across OPF, nav, and content docs.
 // It runs on OPF files but reads cross-file context.
@@ -28,17 +27,7 @@ func (v *PageValidator) Validate(
 		return nil
 	}
 
-	root, xmlDiags := parser.Parse(content)
-	if len(xmlDiags) > 0 {
-		return nil
-	}
-
-	pkg := root.FindFirst("package")
-	if pkg == nil {
-		return nil
-	}
-
-	metadata := pkg.FindFirst("metadata")
+	_, metadata := opf.ParseOPFMetadata(content)
 	if metadata == nil {
 		return nil
 	}
@@ -106,7 +95,7 @@ func navHasPageList(ctx *validator.WorkspaceContext) bool {
 			continue
 		}
 		for _, nav := range root.FindAll("nav") {
-			if nav.AttrNS(epubNS, "type") == "page-list" {
+			if nav.AttrNS(epub.NSEpub, "type") == "page-list" {
 				return true
 			}
 		}
@@ -138,8 +127,8 @@ func hasPageBreakInContent(content []byte) bool {
 
 func findPageBreak(node *parser.XMLNode) bool {
 	for _, child := range node.Children {
-		epubType := child.AttrNS(epubNS, "type")
-		if containsToken(epubType, "pagebreak") {
+		epubType := child.AttrNS(epub.NSEpub, "type")
+		if epub.ContainsToken(epubType, "pagebreak") {
 			return true
 		}
 		if findPageBreak(child) {
@@ -168,7 +157,7 @@ func checkPageListReferences(
 			continue
 		}
 		for _, nav := range root.FindAll("nav") {
-			if nav.AttrNS(epubNS, "type") != "page-list" {
+			if nav.AttrNS(epub.NSEpub, "type") != "page-list" {
 				continue
 			}
 			// Check each link in the page list
@@ -227,9 +216,4 @@ func findElementByID(node *parser.XMLNode, id string) bool {
 		}
 	}
 	return false
-}
-
-// containsToken checks if a space-separated token list contains the given token.
-func containsToken(tokenList, token string) bool {
-	return slices.Contains(strings.Fields(tokenList), token)
 }

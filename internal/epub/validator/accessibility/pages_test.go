@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/toba/epub-lsp/internal/epub"
+	"github.com/toba/epub-lsp/internal/epub/testutil"
 	"github.com/toba/epub-lsp/internal/epub/validator"
 )
 
@@ -73,7 +74,7 @@ func TestPageValidator_PrintPageNumbers_NoPageList(t *testing.T) {
 	v := &PageValidator{}
 	diags := v.Validate("file:///book/OEBPS/package.opf", opfContent, ctx)
 
-	expectCode(t, diagCodes(diags), "printPageNumbers-nopagelist")
+	testutil.ExpectCode(t, testutil.DiagCodes(diags), "printPageNumbers-nopagelist")
 }
 
 func TestPageValidator_PrintPageNumbers_NoPageBreaks(t *testing.T) {
@@ -106,7 +107,7 @@ func TestPageValidator_PrintPageNumbers_NoPageBreaks(t *testing.T) {
 	v := &PageValidator{}
 	diags := v.Validate("file:///book/OEBPS/package.opf", opfContent, ctx)
 
-	expectCode(t, diagCodes(diags), "printPageNumbers-nopagebreaks")
+	testutil.ExpectCode(t, testutil.DiagCodes(diags), "printPageNumbers-nopagebreaks")
 }
 
 func TestPageValidator_PrintPageNumbers_AllPresent(t *testing.T) {
@@ -134,7 +135,7 @@ func TestPageValidator_PrintPageNumbers_AllPresent(t *testing.T) {
 	v := &PageValidator{}
 	diags := v.Validate("file:///book/OEBPS/package.opf", opfContent, ctx)
 
-	codes := diagCodes(diags)
+	codes := testutil.DiagCodes(diags)
 	if codes["printPageNumbers-nopagelist"] {
 		t.Error("unexpected printPageNumbers-nopagelist")
 	}
@@ -166,7 +167,7 @@ func TestPageValidator_PageListWithoutDCSource(t *testing.T) {
 	v := &PageValidator{}
 	diags := v.Validate("file:///book/OEBPS/package.opf", opfContent, ctx)
 
-	expectCode(t, diagCodes(diags), "epub-pagesource")
+	testutil.ExpectCode(t, testutil.DiagCodes(diags), "epub-pagesource")
 }
 
 func TestPageValidator_BrokenPageListRef(t *testing.T) {
@@ -204,7 +205,7 @@ func TestPageValidator_BrokenPageListRef(t *testing.T) {
 	v := &PageValidator{}
 	diags := v.Validate("file:///book/OEBPS/package.opf", opfContent, ctx)
 
-	expectCode(t, diagCodes(diags), "epub-pagelist-broken")
+	testutil.ExpectCode(t, testutil.DiagCodes(diags), "epub-pagelist-broken")
 }
 
 func TestPageValidator_NilContext(t *testing.T) {

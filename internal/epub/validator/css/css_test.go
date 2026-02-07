@@ -3,7 +3,7 @@ package css
 import (
 	"testing"
 
-	"github.com/toba/epub-lsp/internal/epub"
+	"github.com/toba/epub-lsp/internal/epub/testutil"
 )
 
 func TestValidCSS(t *testing.T) {
@@ -36,7 +36,7 @@ p {
 	v := &Validator{}
 	diags := v.Validate("style.css", content, nil)
 
-	if !hasCode(diags, "CSS_001") {
+	if !testutil.HasCode(diags, "CSS_001") {
 		t.Error("expected CSS_001 for direction property")
 	}
 }
@@ -51,7 +51,7 @@ span {
 	v := &Validator{}
 	diags := v.Validate("style.css", content, nil)
 
-	if !hasCode(diags, "CSS_001") {
+	if !testutil.HasCode(diags, "CSS_001") {
 		t.Error("expected CSS_001 for unicode-bidi property")
 	}
 }
@@ -66,7 +66,7 @@ func TestPositionFixed(t *testing.T) {
 	v := &Validator{}
 	diags := v.Validate("style.css", content, nil)
 
-	if !hasCode(diags, "CSS_006") {
+	if !testutil.HasCode(diags, "CSS_006") {
 		t.Error("expected CSS_006 for position: fixed")
 	}
 }
@@ -81,7 +81,7 @@ func TestPositionAbsolute(t *testing.T) {
 	v := &Validator{}
 	diags := v.Validate("style.css", content, nil)
 
-	if !hasCode(diags, "CSS_017") {
+	if !testutil.HasCode(diags, "CSS_017") {
 		t.Error("expected CSS_017 for position: absolute")
 	}
 }
@@ -97,7 +97,7 @@ func TestNonStandardFontFormat(t *testing.T) {
 	v := &Validator{}
 	diags := v.Validate("style.css", content, nil)
 
-	if !hasCode(diags, "CSS_007") {
+	if !testutil.HasCode(diags, "CSS_007") {
 		t.Error("expected CSS_007 for non-standard font format")
 	}
 }
@@ -126,7 +126,7 @@ func TestInvalidUTF8CSS(t *testing.T) {
 	v := &Validator{}
 	diags := v.Validate("style.css", content, nil)
 
-	if !hasCode(diags, "CSS_003") {
+	if !testutil.HasCode(diags, "CSS_003") {
 		t.Error("expected CSS_003 for invalid UTF-8")
 	}
 }
@@ -137,7 +137,7 @@ func TestUnclosedBrace(t *testing.T) {
 	v := &Validator{}
 	diags := v.Validate("style.css", content, nil)
 
-	if !hasCode(diags, "CSS_008") {
+	if !testutil.HasCode(diags, "CSS_008") {
 		t.Error("expected CSS_008 for unclosed brace")
 	}
 }
@@ -171,15 +171,4 @@ func TestMultipleIssues(t *testing.T) {
 	if css006Count != 1 {
 		t.Errorf("expected 1 CSS_006 diagnostic, got %d", css006Count)
 	}
-}
-
-// helpers
-
-func hasCode(diags []epub.Diagnostic, code string) bool {
-	for _, d := range diags {
-		if d.Code == code {
-			return true
-		}
-	}
-	return false
 }

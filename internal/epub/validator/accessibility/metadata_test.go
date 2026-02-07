@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/toba/epub-lsp/internal/epub"
+	"github.com/toba/epub-lsp/internal/epub/testutil"
 )
 
 func TestMetadataValidator_FullyAccessible(t *testing.T) {
@@ -48,12 +49,12 @@ func TestMetadataValidator_AllMissing(t *testing.T) {
 	v := &MetadataValidator{}
 	diags := v.Validate("package.opf", content, nil)
 
-	codes := diagCodes(diags)
-	expectCode(t, codes, "metadata-accessmode")
-	expectCode(t, codes, "metadata-accessibilityfeature")
-	expectCode(t, codes, "metadata-accessibilityhazard")
-	expectCode(t, codes, "metadata-accessibilitysummary")
-	expectCode(t, codes, "metadata-accessmodesufficient")
+	codes := testutil.DiagCodes(diags)
+	testutil.ExpectCode(t, codes, "metadata-accessmode")
+	testutil.ExpectCode(t, codes, "metadata-accessibilityfeature")
+	testutil.ExpectCode(t, codes, "metadata-accessibilityhazard")
+	testutil.ExpectCode(t, codes, "metadata-accessibilitysummary")
+	testutil.ExpectCode(t, codes, "metadata-accessmodesufficient")
 }
 
 func TestMetadataValidator_InvalidAccessMode(t *testing.T) {
@@ -76,7 +77,7 @@ func TestMetadataValidator_InvalidAccessMode(t *testing.T) {
 	v := &MetadataValidator{}
 	diags := v.Validate("package.opf", content, nil)
 
-	expectCode(t, diagCodes(diags), "metadata-accessmode-invalid")
+	testutil.ExpectCode(t, testutil.DiagCodes(diags), "metadata-accessmode-invalid")
 }
 
 func TestMetadataValidator_InvalidFeature(t *testing.T) {
@@ -98,7 +99,11 @@ func TestMetadataValidator_InvalidFeature(t *testing.T) {
 	v := &MetadataValidator{}
 	diags := v.Validate("package.opf", content, nil)
 
-	expectCode(t, diagCodes(diags), "metadata-accessibilityfeature-invalid")
+	testutil.ExpectCode(
+		t,
+		testutil.DiagCodes(diags),
+		"metadata-accessibilityfeature-invalid",
+	)
 }
 
 func TestMetadataValidator_ContradictoryHazards(t *testing.T) {
@@ -154,24 +159,9 @@ func TestMetadataValidator_InvalidHazard(t *testing.T) {
 	v := &MetadataValidator{}
 	diags := v.Validate("package.opf", content, nil)
 
-	expectCode(t, diagCodes(diags), "metadata-accessibilityhazard-invalid")
-}
-
-// helpers
-
-func diagCodes(diags []epub.Diagnostic) map[string]bool {
-	codes := make(map[string]bool)
-	for _, d := range diags {
-		if d.Code != "" {
-			codes[d.Code] = true
-		}
-	}
-	return codes
-}
-
-func expectCode(t *testing.T, codes map[string]bool, code string) {
-	t.Helper()
-	if !codes[code] {
-		t.Errorf("expected diagnostic code %s", code)
-	}
+	testutil.ExpectCode(
+		t,
+		testutil.DiagCodes(diags),
+		"metadata-accessibilityhazard-invalid",
+	)
 }

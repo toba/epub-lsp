@@ -3,7 +3,7 @@ package accessibility
 import (
 	"testing"
 
-	"github.com/toba/epub-lsp/internal/epub"
+	"github.com/toba/epub-lsp/internal/epub/testutil"
 )
 
 func TestEpubTypeWithoutRole(t *testing.T) {
@@ -20,7 +20,7 @@ func TestEpubTypeWithoutRole(t *testing.T) {
 	v := &StructureValidator{}
 	diags := v.Validate("chapter.xhtml", content, nil)
 
-	if !hasCode(diags, "epub-type-has-matching-role") {
+	if !testutil.HasCode(diags, "epub-type-has-matching-role") {
 		t.Error("expected epub-type-has-matching-role for chapter without role")
 	}
 }
@@ -39,7 +39,7 @@ func TestEpubTypeWithMatchingRole(t *testing.T) {
 	v := &StructureValidator{}
 	diags := v.Validate("chapter.xhtml", content, nil)
 
-	if hasCode(diags, "epub-type-has-matching-role") {
+	if testutil.HasCode(diags, "epub-type-has-matching-role") {
 		t.Error("unexpected epub-type-has-matching-role when role matches")
 	}
 }
@@ -56,7 +56,7 @@ func TestPageBreakWithoutLabel(t *testing.T) {
 	v := &StructureValidator{}
 	diags := v.Validate("chapter.xhtml", content, nil)
 
-	if !hasCode(diags, "pagebreak-label") {
+	if !testutil.HasCode(diags, "pagebreak-label") {
 		t.Error("expected pagebreak-label for pagebreak without label")
 	}
 }
@@ -73,7 +73,7 @@ func TestPageBreakWithAriaLabel(t *testing.T) {
 	v := &StructureValidator{}
 	diags := v.Validate("chapter.xhtml", content, nil)
 
-	if hasCode(diags, "pagebreak-label") {
+	if testutil.HasCode(diags, "pagebreak-label") {
 		t.Error("unexpected pagebreak-label when aria-label is present")
 	}
 }
@@ -90,7 +90,7 @@ func TestPageBreakWithTitle(t *testing.T) {
 	v := &StructureValidator{}
 	diags := v.Validate("chapter.xhtml", content, nil)
 
-	if hasCode(diags, "pagebreak-label") {
+	if testutil.HasCode(diags, "pagebreak-label") {
 		t.Error("unexpected pagebreak-label when title is present")
 	}
 }
@@ -108,7 +108,7 @@ func TestHeadingLevelSkip(t *testing.T) {
 	v := &StructureValidator{}
 	diags := v.Validate("chapter.xhtml", content, nil)
 
-	if !hasCode(diags, "heading-order") {
+	if !testutil.HasCode(diags, "heading-order") {
 		t.Error("expected heading-order for h1 -> h3 skip")
 	}
 }
@@ -128,7 +128,7 @@ func TestHeadingLevelNoSkip(t *testing.T) {
 	v := &StructureValidator{}
 	diags := v.Validate("chapter.xhtml", content, nil)
 
-	if hasCode(diags, "heading-order") {
+	if testutil.HasCode(diags, "heading-order") {
 		t.Error("unexpected heading-order when levels don't skip")
 	}
 }
@@ -147,7 +147,7 @@ func TestTableWithoutCaption(t *testing.T) {
 	v := &StructureValidator{}
 	diags := v.Validate("chapter.xhtml", content, nil)
 
-	if !hasCode(diags, "table-caption") {
+	if !testutil.HasCode(diags, "table-caption") {
 		t.Error("expected table-caption for table without caption")
 	}
 }
@@ -167,7 +167,7 @@ func TestTableWithCaption(t *testing.T) {
 	v := &StructureValidator{}
 	diags := v.Validate("chapter.xhtml", content, nil)
 
-	if hasCode(diags, "table-caption") {
+	if testutil.HasCode(diags, "table-caption") {
 		t.Error("unexpected table-caption when caption is present")
 	}
 }
@@ -186,7 +186,7 @@ func TestTableWithAriaLabel(t *testing.T) {
 	v := &StructureValidator{}
 	diags := v.Validate("chapter.xhtml", content, nil)
 
-	if hasCode(diags, "table-caption") {
+	if testutil.HasCode(diags, "table-caption") {
 		t.Error("unexpected table-caption when aria-label is present")
 	}
 }
@@ -205,7 +205,7 @@ func TestInputWithoutLabel(t *testing.T) {
 	v := &StructureValidator{}
 	diags := v.Validate("chapter.xhtml", content, nil)
 
-	if !hasCode(diags, "input-label") {
+	if !testutil.HasCode(diags, "input-label") {
 		t.Error("expected input-label for input without label")
 	}
 }
@@ -225,7 +225,7 @@ func TestInputWithLabel(t *testing.T) {
 	v := &StructureValidator{}
 	diags := v.Validate("chapter.xhtml", content, nil)
 
-	if hasCode(diags, "input-label") {
+	if testutil.HasCode(diags, "input-label") {
 		t.Error("unexpected input-label when label for= matches")
 	}
 }
@@ -245,7 +245,7 @@ func TestInputHiddenNoLabel(t *testing.T) {
 	v := &StructureValidator{}
 	diags := v.Validate("chapter.xhtml", content, nil)
 
-	if hasCode(diags, "input-label") {
+	if testutil.HasCode(diags, "input-label") {
 		t.Error("unexpected input-label for hidden/submit inputs")
 	}
 }
@@ -266,18 +266,7 @@ func TestSelectWithoutLabel(t *testing.T) {
 	v := &StructureValidator{}
 	diags := v.Validate("chapter.xhtml", content, nil)
 
-	if !hasCode(diags, "input-label") {
+	if !testutil.HasCode(diags, "input-label") {
 		t.Error("expected input-label for select without label")
 	}
-}
-
-// helpers
-
-func hasCode(diags []epub.Diagnostic, code string) bool {
-	for _, d := range diags {
-		if d.Code == code {
-			return true
-		}
-	}
-	return false
 }

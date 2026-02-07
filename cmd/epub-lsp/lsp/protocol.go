@@ -5,11 +5,6 @@ package lsp
 const (
 	JSONRPCVersion = "2.0"
 
-	SeverityError   = 1
-	SeverityWarning = 2
-	SeverityInfo    = 3
-	SeverityHint    = 4
-
 	TextDocumentSyncFull = 1
 
 	ErrorInvalidRequest = -32600

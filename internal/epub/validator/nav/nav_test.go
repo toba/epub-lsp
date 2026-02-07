@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/toba/epub-lsp/internal/epub"
+	"github.com/toba/epub-lsp/internal/epub/testutil"
 	"github.com/toba/epub-lsp/internal/epub/validator"
 )
 
@@ -54,7 +55,7 @@ func TestMissingTocNav(t *testing.T) {
 	v := &Validator{}
 	diags := v.Validate("nav.xhtml", content, nil)
 
-	if !hasCode(diags, "NAV_003") {
+	if !testutil.HasCode(diags, "NAV_003") {
 		t.Error("expected NAV_003 for missing toc nav")
 	}
 }
@@ -106,7 +107,7 @@ func TestRemoteNavLink(t *testing.T) {
 	v := &Validator{}
 	diags := v.Validate("nav.xhtml", content, nil)
 
-	if !hasCode(diags, "NAV_010") {
+	if !testutil.HasCode(diags, "NAV_010") {
 		t.Error("expected NAV_010 for remote link")
 	}
 }
@@ -170,7 +171,7 @@ func TestTocSpineOrderMismatch(t *testing.T) {
 	v := &Validator{}
 	diags := v.Validate("nav.xhtml", content, ctx)
 
-	if !hasCode(diags, "NAV_011") {
+	if !testutil.HasCode(diags, "NAV_011") {
 		t.Error("expected NAV_011 for TOC/spine order mismatch")
 	}
 }
@@ -205,18 +206,7 @@ func TestTocSpineOrderMatch(t *testing.T) {
 	v := &Validator{}
 	diags := v.Validate("nav.xhtml", content, ctx)
 
-	if hasCode(diags, "NAV_011") {
+	if testutil.HasCode(diags, "NAV_011") {
 		t.Error("unexpected NAV_011 when TOC matches spine order")
 	}
-}
-
-// helpers
-
-func hasCode(diags []epub.Diagnostic, code string) bool {
-	for _, d := range diags {
-		if d.Code == code {
-			return true
-		}
-	}
-	return false
 }

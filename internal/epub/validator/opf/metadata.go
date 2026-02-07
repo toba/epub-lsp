@@ -5,35 +5,21 @@ import (
 	"github.com/toba/epub-lsp/internal/epub/parser"
 )
 
-const dcNS = "http://purl.org/dc/elements/1.1/"
-
 func validateMetadata(content []byte, pkg *parser.XMLNode) []epub.Diagnostic {
 	var diags []epub.Diagnostic
 
 	metadata := pkg.FindFirst("metadata")
 	if metadata == nil {
-		pos := epub.ByteOffsetToPosition(content, int(pkg.Offset))
-		diags = append(diags, epub.Diagnostic{
-			Code:     "OPF_030",
-			Severity: epub.SeverityError,
-			Message:  "missing required <metadata> element",
-			Source:   source,
-			Range:    epub.Range{Start: pos, End: pos},
-		})
+		diags = append(diags, epub.NewDiag(content, int(pkg.Offset), source).
+			Code("OPF_030").Error("missing required <metadata> element").Build())
 		return diags
 	}
 
 	// Check dc:identifier
-	identifiers := metadata.FindAllNS(dcNS, "identifier")
+	identifiers := metadata.FindAllNS(epub.NSDC, "identifier")
 	if len(identifiers) == 0 {
-		pos := epub.ByteOffsetToPosition(content, int(metadata.Offset))
-		diags = append(diags, epub.Diagnostic{
-			Code:     "OPF_030",
-			Severity: epub.SeverityError,
-			Message:  "missing required <dc:identifier> in metadata",
-			Source:   source,
-			Range:    epub.Range{Start: pos, End: pos},
-		})
+		diags = append(diags, epub.NewDiag(content, int(metadata.Offset), source).
+			Code("OPF_030").Error("missing required <dc:identifier> in metadata").Build())
 	}
 
 	// Check unique-identifier references a valid dc:identifier
@@ -47,41 +33,25 @@ func validateMetadata(content []byte, pkg *parser.XMLNode) []epub.Diagnostic {
 			}
 		}
 		if !found {
-			pos := epub.ByteOffsetToPosition(content, int(pkg.Offset))
-			diags = append(diags, epub.Diagnostic{
-				Code:     "OPF_031",
-				Severity: epub.SeverityError,
-				Message:  "unique-identifier \"" + uniqueID + "\" does not match any dc:identifier/@id",
-				Source:   source,
-				Range:    epub.Range{Start: pos, End: pos},
-			})
+			diags = append(diags, epub.NewDiag(content, int(pkg.Offset), source).
+				Code("OPF_031").
+				Error("unique-identifier \""+uniqueID+"\" does not match any dc:identifier/@id").
+				Build())
 		}
 	}
 
 	// Check dc:title
-	titles := metadata.FindAllNS(dcNS, "title")
+	titles := metadata.FindAllNS(epub.NSDC, "title")
 	if len(titles) == 0 {
-		pos := epub.ByteOffsetToPosition(content, int(metadata.Offset))
-		diags = append(diags, epub.Diagnostic{
-			Code:     "OPF_032",
-			Severity: epub.SeverityError,
-			Message:  "missing required <dc:title> in metadata",
-			Source:   source,
-			Range:    epub.Range{Start: pos, End: pos},
-		})
+		diags = append(diags, epub.NewDiag(content, int(metadata.Offset), source).
+			Code("OPF_032").Error("missing required <dc:title> in metadata").Build())
 	}
 
 	// Check dc:language
-	languages := metadata.FindAllNS(dcNS, "language")
+	languages := metadata.FindAllNS(epub.NSDC, "language")
 	if len(languages) == 0 {
-		pos := epub.ByteOffsetToPosition(content, int(metadata.Offset))
-		diags = append(diags, epub.Diagnostic{
-			Code:     "OPF_034",
-			Severity: epub.SeverityError,
-			Message:  "missing required <dc:language> in metadata",
-			Source:   source,
-			Range:    epub.Range{Start: pos, End: pos},
-		})
+		diags = append(diags, epub.NewDiag(content, int(metadata.Offset), source).
+			Code("OPF_034").Error("missing required <dc:language> in metadata").Build())
 	}
 
 	return diags

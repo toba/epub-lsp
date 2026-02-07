@@ -3,7 +3,7 @@ package resource
 import (
 	"testing"
 
-	"github.com/toba/epub-lsp/internal/epub"
+	"github.com/toba/epub-lsp/internal/epub/testutil"
 	"github.com/toba/epub-lsp/internal/epub/validator"
 )
 
@@ -34,7 +34,7 @@ func TestManifestValidator_MissingFile(t *testing.T) {
 	v := &ManifestValidator{}
 	diags := v.Validate("file:///book/OEBPS/package.opf", content, ctx)
 
-	if !hasCode(diags, "RSC_007") {
+	if !testutil.HasCode(diags, "RSC_007") {
 		t.Error("expected RSC_007 for missing file")
 	}
 
@@ -78,7 +78,7 @@ func TestManifestValidator_AllFilesExist(t *testing.T) {
 	v := &ManifestValidator{}
 	diags := v.Validate("file:///book/OEBPS/package.opf", content, ctx)
 
-	if hasCode(diags, "RSC_007") {
+	if testutil.HasCode(diags, "RSC_007") {
 		t.Error("unexpected RSC_007 when all files exist")
 	}
 }
@@ -126,7 +126,7 @@ func TestContentValidator_ResourceNotInManifest(t *testing.T) {
 	diags := v.Validate("file:///book/OEBPS/chapter1.xhtml", content, ctx)
 
 	// photo.png is not in manifest
-	if !hasCode(diags, "RSC_008") {
+	if !testutil.HasCode(diags, "RSC_008") {
 		t.Error("expected RSC_008 for photo.png not in manifest")
 	}
 
@@ -167,7 +167,7 @@ func TestContentValidator_AllResourcesInManifest(t *testing.T) {
 	v := &ContentValidator{}
 	diags := v.Validate("file:///book/OEBPS/chapter1.xhtml", content, ctx)
 
-	if hasCode(diags, "RSC_008") {
+	if testutil.HasCode(diags, "RSC_008") {
 		t.Error("unexpected RSC_008 when all resources are in manifest")
 	}
 }
@@ -191,7 +191,7 @@ func TestContentValidator_SkipsRemoteAndDataURIs(t *testing.T) {
 	v := &ContentValidator{}
 	diags := v.Validate("chapter.xhtml", content, ctx)
 
-	if hasCode(diags, "RSC_008") {
+	if testutil.HasCode(diags, "RSC_008") {
 		t.Error("unexpected RSC_008 for remote/data URIs")
 	}
 }
@@ -209,15 +209,4 @@ func TestContentValidator_NilManifest(t *testing.T) {
 	if len(diags) != 0 {
 		t.Errorf("expected no diagnostics with nil context, got %d", len(diags))
 	}
-}
-
-// helpers
-
-func hasCode(diags []epub.Diagnostic, code string) bool {
-	for _, d := range diags {
-		if d.Code == code {
-			return true
-		}
-	}
-	return false
 }

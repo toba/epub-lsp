@@ -61,7 +61,7 @@ func (v *ManifestValidator) Validate(
 		}
 
 		// Skip remote resources
-		if strings.HasPrefix(href, "http://") || strings.HasPrefix(href, "https://") {
+		if epub.IsRemoteURL(href) {
 			continue
 		}
 
@@ -69,14 +69,9 @@ func (v *ManifestValidator) Validate(
 		resolvedURI := resolveHref(opfDir, href)
 
 		if !fileExistsInWorkspace(resolvedURI, ctx.Files) {
-			pos := epub.ByteOffsetToPosition(content, int(item.Offset))
-			diags = append(diags, epub.Diagnostic{
-				Code:     "RSC_007",
-				Severity: epub.SeverityError,
-				Message:  "manifest item references missing file: " + href,
-				Source:   source,
-				Range:    epub.Range{Start: pos, End: pos},
-			})
+			diags = append(diags, epub.NewDiag(content, int(item.Offset), source).
+				Code("RSC_007").
+				Error("manifest item references missing file: "+href).Build())
 		}
 	}
 
@@ -122,8 +117,7 @@ func (v *ContentValidator) Validate(
 		if src == "" {
 			continue
 		}
-		if strings.HasPrefix(src, "http://") || strings.HasPrefix(src, "https://") ||
-			strings.HasPrefix(src, "data:") {
+		if epub.IsRemoteURL(src) || strings.HasPrefix(src, "data:") {
 			continue
 		}
 		checkResourceInManifest(content, img, src, contentDir, manifestHrefs, &diags)
@@ -136,7 +130,7 @@ func (v *ContentValidator) Validate(
 		if href == "" {
 			continue
 		}
-		if strings.HasPrefix(href, "http://") || strings.HasPrefix(href, "https://") {
+		if epub.IsRemoteURL(href) {
 			continue
 		}
 		checkResourceInManifest(content, link, href, contentDir, manifestHrefs, &diags)
@@ -150,8 +144,7 @@ func (v *ContentValidator) Validate(
 			if src == "" {
 				src = elem.Attr("href")
 			}
-			if src == "" || strings.HasPrefix(src, "http://") ||
-				strings.HasPrefix(src, "https://") ||
+			if src == "" || epub.IsRemoteURL(src) ||
 				strings.HasPrefix(src, "data:") {
 				continue
 			}
@@ -170,10 +163,7 @@ func checkResourceInManifest(
 	manifestHrefs map[string]bool,
 	diags *[]epub.Diagnostic,
 ) {
-	// Strip fragment
-	if idx := strings.Index(ref, "#"); idx >= 0 {
-		ref = ref[:idx]
-	}
+	ref = epub.StripFragment(ref)
 	if ref == "" {
 		return
 	}
@@ -201,14 +191,8 @@ func checkResourceInManifest(
 	}
 
 	if !found {
-		pos := epub.ByteOffsetToPosition(content, int(node.Offset))
-		*diags = append(*diags, epub.Diagnostic{
-			Code:     "RSC_008",
-			Severity: epub.SeverityWarning,
-			Message:  "resource not found in manifest: " + ref,
-			Source:   source,
-			Range:    epub.Range{Start: pos, End: pos},
-		})
+		*diags = append(*diags, epub.NewDiag(content, int(node.Offset), source).
+			Code("RSC_008").Warning("resource not found in manifest: "+ref).Build())
 	}
 }
 

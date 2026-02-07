@@ -4,10 +4,12 @@ package accessibility
 
 import (
 	"slices"
+	"strings"
 
 	"github.com/toba/epub-lsp/internal/epub"
 	"github.com/toba/epub-lsp/internal/epub/parser"
 	"github.com/toba/epub-lsp/internal/epub/validator"
+	"github.com/toba/epub-lsp/internal/epub/validator/opf"
 )
 
 const source = "epub-accessibility"
@@ -64,21 +66,10 @@ func (v *MetadataValidator) Validate(
 	content []byte,
 	_ *validator.WorkspaceContext,
 ) []epub.Diagnostic {
-	root, xmlDiags := parser.Parse(content)
-	if len(xmlDiags) > 0 {
-		return nil
-	}
-
-	pkg := root.FindFirst("package")
-	if pkg == nil {
-		return nil
-	}
-
-	metadata := pkg.FindFirst("metadata")
+	_, metadata := opf.ParseOPFMetadata(content)
 	if metadata == nil {
 		return nil
 	}
-
 	return validateAccessibilityMetadata(content, metadata)
 }
 
@@ -108,21 +99,14 @@ func validateAccessibilityMetadata(
 		if property == "" {
 			continue
 		}
-		value := trimCharData(child.CharData)
-		metaPos := epub.ByteOffsetToPosition(content, int(child.Offset))
-		metaRng := epub.Range{Start: metaPos, End: metaPos}
-
+		value := strings.TrimSpace(child.CharData)
 		switch property {
 		case "schema:accessMode":
 			accessModes = append(accessModes, value)
 			if !slices.Contains(validAccessModes, value) {
-				diags = append(diags, epub.Diagnostic{
-					Code:     "metadata-accessmode-invalid",
-					Severity: epub.SeverityError,
-					Message:  "invalid access mode value: \"" + value + "\"",
-					Source:   source,
-					Range:    metaRng,
-				})
+				diags = append(diags, epub.NewDiag(content, int(child.Offset), source).
+					Code("metadata-accessmode-invalid").
+					Error("invalid access mode value: \""+value+"\"").Build())
 			}
 
 		case "schema:accessModeSufficient":
@@ -131,25 +115,17 @@ func validateAccessibilityMetadata(
 		case "schema:accessibilityFeature":
 			features = append(features, value)
 			if !slices.Contains(validAccessibilityFeatures, value) {
-				diags = append(diags, epub.Diagnostic{
-					Code:     "metadata-accessibilityfeature-invalid",
-					Severity: epub.SeverityError,
-					Message:  "invalid accessibility feature value: \"" + value + "\"",
-					Source:   source,
-					Range:    metaRng,
-				})
+				diags = append(diags, epub.NewDiag(content, int(child.Offset), source).
+					Code("metadata-accessibilityfeature-invalid").
+					Error("invalid accessibility feature value: \""+value+"\"").Build())
 			}
 
 		case "schema:accessibilityHazard":
 			hazards = append(hazards, value)
 			if !slices.Contains(validAccessibilityHazards, value) {
-				diags = append(diags, epub.Diagnostic{
-					Code:     "metadata-accessibilityhazard-invalid",
-					Severity: epub.SeverityError,
-					Message:  "invalid accessibility hazard value: \"" + value + "\"",
-					Source:   source,
-					Range:    metaRng,
-				})
+				diags = append(diags, epub.NewDiag(content, int(child.Offset), source).
+					Code("metadata-accessibilityhazard-invalid").
+					Error("invalid accessibility hazard value: \""+value+"\"").Build())
 			}
 
 		case "schema:accessibilitySummary":
@@ -227,17 +203,4 @@ func validateAccessibilityMetadata(
 	}
 
 	return diags
-}
-
-func trimCharData(s string) string {
-	// Trim whitespace from both ends
-	start := 0
-	end := len(s)
-	for start < end && (s[start] == ' ' || s[start] == '\t' || s[start] == '\n' || s[start] == '\r') {
-		start++
-	}
-	for end > start && (s[end-1] == ' ' || s[end-1] == '\t' || s[end-1] == '\n' || s[end-1] == '\r') {
-		end--
-	}
-	return s[start:end]
 }

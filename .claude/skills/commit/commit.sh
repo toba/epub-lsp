@@ -86,29 +86,29 @@ if [ "$PUSH" = "true" ]; then
         git push origin "$NEW_VERSION"
         echo "==> Tag $NEW_VERSION pushed, GoReleaser workflow will create release"
 
-        # Update Zed extension version (gozer is sibling repo)
+        # Update Zed extension version (gubby is sibling repo)
         SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-        GOZER_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)/../gozer"
-        GOZER_EXT_TOML="$GOZER_DIR/extension.toml"
-        GOZER_CARGO_TOML="$GOZER_DIR/Cargo.toml"
-        if [ -f "$GOZER_EXT_TOML" ]; then
+        GUBBY_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)/../gubby"
+        GUBBY_EXT_TOML="$GUBBY_DIR/extension.toml"
+        GUBBY_CARGO_TOML="$GUBBY_DIR/Cargo.toml"
+        if [ -f "$GUBBY_EXT_TOML" ]; then
             # Strip 'v' prefix for toml files (uses 0.6.4 not v0.6.4)
             EXT_VERSION=$(echo "$NEW_VERSION" | sed 's/^v//')
             echo ""
-            echo "==> Updating gozer to $EXT_VERSION..."
-            sed -i '' "s/^version = \".*\"/version = \"$EXT_VERSION\"/" "$GOZER_EXT_TOML"
-            sed -i '' "s/^version = \".*\"/version = \"$EXT_VERSION\"/" "$GOZER_CARGO_TOML"
+            echo "==> Updating gubby to $EXT_VERSION..."
+            sed -i '' "s/^version = \".*\"/version = \"$EXT_VERSION\"/" "$GUBBY_EXT_TOML"
+            sed -i '' "s/^version = \".*\"/version = \"$EXT_VERSION\"/" "$GUBBY_CARGO_TOML"
 
             # Commit and push the extension update
             (
-                cd "$GOZER_DIR"
+                cd "$GUBBY_DIR"
                 git add extension.toml Cargo.toml
                 git commit -m "bump version to $EXT_VERSION"
                 git push
-                echo "==> gozer updated and pushed"
+                echo "==> gubby updated and pushed"
             )
         else
-            echo "==> gozer extension.toml not found at $GOZER_EXT_TOML, skipping"
+            echo "==> gubby extension.toml not found at $GUBBY_EXT_TOML, skipping"
         fi
     else
         echo "==> No existing tags, skipping version bump"
