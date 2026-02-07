@@ -24,10 +24,11 @@ go test ./...
 
 ## Project Layout
 
-- `cmd/epub-lsp/` - LSP server entry point and JSON-RPC message loop
-- `cmd/epub-lsp/lsp/` - Protocol types, message framing, request handlers
+- `cmd/epub-lsp/` - LSP server entry point, JSON-RPC message loop, `workspaceStore` with `WorkspaceReader` impl
+- `cmd/epub-lsp/lsp/` - Protocol types, message framing, request handlers for all LSP methods
 - `internal/epub/` - Core types: `Diagnostic`, `FileType`, `Position`, `DiagBuilder`, namespace constants, URL utilities
-- `internal/epub/parser/` - XML parser (namespace-aware, offset-tracking) and CSS tokenizer
+- `internal/epub/parser/` - XML parser (namespace-aware, offset-tracking), CSS tokenizer, `LocateAtPosition` for cursor-to-node resolution
+- `internal/epub/formatter/` - XML and CSS formatting (`FormatXML`, `FormatCSS`)
 - `internal/epub/testutil/` - Shared test helpers (`HasCode`, `DiagCodes`, `ExpectCode`, `SeverityName`)
 - `internal/epub/validator/` - `Registry`, `Validator` interface, `WorkspaceContext`
 - `internal/epub/validator/opf/` - OPF package validation (metadata, manifest, spine) and `ParseOPFMetadata`/`ParseManifest` helpers
@@ -41,11 +42,14 @@ go test ./...
 
 - Validators implement the `Validator` interface and register with `validator.Registry`
 - `DiagBuilder` fluent API: `epub.NewDiag(content, offset, source).Code("X").Error("msg").Build()`
+- `WorkspaceReader` interface decouples LSP handlers from workspace state (defined in `lsp/methods.go`, implemented by `workspaceStore`)
+- `LocateAtPosition` resolves cursor offset to XML node/attribute for definition, hover, completion, references
 - Namespace constants live in `internal/epub/namespace.go` (`NSEpub`, `NSDC`, `NSXHTML`, `NSXML`)
 - URL helpers live in `internal/epub/urlutil.go` (`IsRemoteURL`, `StripFragment`, `ContainsToken`)
 - Test helpers live in `internal/epub/testutil/` - use these instead of defining per-package helpers
 - Cross-file data flows through `WorkspaceContext` (manifest info, file map, file types)
 - Files are validated concurrently per workspace change via `sync.WaitGroup`
+- LSP handler functions follow the pattern `Handle<Method>(data []byte, ws WorkspaceReader) []byte`
 
 ## Releasing
 

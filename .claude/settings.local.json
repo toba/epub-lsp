@@ -54,7 +54,9 @@
       "Bash(expand:*)",
       "Bash(beans prime:*)",
       "WebFetch(domain:www.w3.org)",
-      "WebFetch(domain:daisy.github.io)"
+      "WebFetch(domain:daisy.github.io)",
+      "Bash(gh repo create:*)",
+      "Bash(PUSH=true NEW_VERSION=v0.2.0 /Users/jason/Developer/toba/epub-lsp/.claude/skills/commit/commit.sh:*)"
     ]
   },
   "hooks": {

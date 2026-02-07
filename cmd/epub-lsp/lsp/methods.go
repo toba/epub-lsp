@@ -5,7 +5,20 @@ import (
 	"errors"
 	"log/slog"
 	"strconv"
+
+	"github.com/toba/epub-lsp/internal/epub"
+	"github.com/toba/epub-lsp/internal/epub/validator"
 )
+
+// WorkspaceReader provides read access to workspace state for LSP handlers.
+type WorkspaceReader interface {
+	GetContent(uri string) []byte
+	GetFileType(uri string) epub.FileType
+	GetManifest() *validator.ManifestInfo
+	GetDiagnostics(uri string) []epub.Diagnostic
+	GetAllFiles() map[string][]byte
+	GetRootPath() string
+}
 
 // ID represents a JSON-RPC request ID that can be either a string or number.
 type ID int
@@ -76,7 +89,20 @@ type ClientInfo struct {
 
 // ServerCapabilities describes the capabilities this server supports.
 type ServerCapabilities struct {
-	TextDocumentSync int `json:"textDocumentSync"`
+	TextDocumentSync           int                `json:"textDocumentSync"`
+	DocumentLinkProvider       bool               `json:"documentLinkProvider,omitempty"`
+	DocumentSymbolProvider     bool               `json:"documentSymbolProvider,omitempty"`
+	DefinitionProvider         bool               `json:"definitionProvider,omitempty"`
+	ReferencesProvider         bool               `json:"referencesProvider,omitempty"`
+	HoverProvider              bool               `json:"hoverProvider,omitempty"`
+	CodeActionProvider         bool               `json:"codeActionProvider,omitempty"`
+	CompletionProvider         *CompletionOptions `json:"completionProvider,omitempty"`
+	DocumentFormattingProvider bool               `json:"documentFormattingProvider,omitempty"`
+}
+
+// CompletionOptions describes completion capabilities.
+type CompletionOptions struct {
+	TriggerCharacters []string `json:"triggerCharacters,omitempty"`
 }
 
 // InitializeResult is the response to the initialize request.
@@ -150,7 +176,17 @@ func ProcessInitializeRequest(
 		Id:      req.Id,
 		Result: InitializeResult{
 			Capabilities: ServerCapabilities{
-				TextDocumentSync: TextDocumentSyncFull,
+				TextDocumentSync:       TextDocumentSyncFull,
+				DocumentLinkProvider:   true,
+				DocumentSymbolProvider: true,
+				DefinitionProvider:     true,
+				ReferencesProvider:     true,
+				HoverProvider:          true,
+				CodeActionProvider:     true,
+				CompletionProvider: &CompletionOptions{
+					TriggerCharacters: []string{"<", "\"", ":", " "},
+				},
+				DocumentFormattingProvider: true,
 			},
 			ServerInfo: ServerInfo{
 				Name:    lspName,
@@ -262,4 +298,177 @@ func ProcessDidChangeTextDocumentNotification(
 	}
 
 	return request.Params.TextDocument.Uri, []byte(changes[0].Text)
+}
+
+// --- New LSP types for interactive features ---
+
+// DocumentLinkParams holds parameters for textDocument/documentLink.
+type DocumentLinkParams struct {
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+}
+
+// DocumentLink represents a link in a document.
+type DocumentLink struct {
+	Range  Range  `json:"range"`
+	Target string `json:"target"`
+}
+
+// DocumentSymbolParams holds parameters for textDocument/documentSymbol.
+type DocumentSymbolParams struct {
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+}
+
+// SymbolKind identifies the kind of a symbol.
+type SymbolKind int
+
+// Symbol kind constants.
+const (
+	SymbolKindFile        SymbolKind = 1
+	SymbolKindModule      SymbolKind = 2
+	SymbolKindNamespace   SymbolKind = 3
+	SymbolKindPackage     SymbolKind = 4
+	SymbolKindClass       SymbolKind = 5
+	SymbolKindMethod      SymbolKind = 6
+	SymbolKindProperty    SymbolKind = 7
+	SymbolKindField       SymbolKind = 8
+	SymbolKindConstructor SymbolKind = 9
+	SymbolKindEnum        SymbolKind = 10
+	SymbolKindInterface   SymbolKind = 11
+	SymbolKindFunction    SymbolKind = 12
+	SymbolKindVariable    SymbolKind = 13
+	SymbolKindConstant    SymbolKind = 14
+	SymbolKindString      SymbolKind = 15
+	SymbolKindNumber      SymbolKind = 16
+	SymbolKindBoolean     SymbolKind = 17
+	SymbolKindArray       SymbolKind = 18
+	SymbolKindObject      SymbolKind = 19
+	SymbolKindKey         SymbolKind = 20
+	SymbolKindNull        SymbolKind = 21
+	SymbolKindStruct      SymbolKind = 23
+	SymbolKindEvent       SymbolKind = 24
+)
+
+// DocumentSymbol represents a symbol in a document.
+type DocumentSymbol struct {
+	Name           string           `json:"name"`
+	Detail         string           `json:"detail,omitempty"`
+	Kind           SymbolKind       `json:"kind"`
+	Range          Range            `json:"range"`
+	SelectionRange Range            `json:"selectionRange"`
+	Children       []DocumentSymbol `json:"children,omitempty"`
+}
+
+// DefinitionParams holds parameters for textDocument/definition.
+type DefinitionParams struct {
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+	Position     Position               `json:"position"`
+}
+
+// Location represents a location in a document.
+type Location struct {
+	URI   string `json:"uri"`
+	Range Range  `json:"range"`
+}
+
+// ReferenceParams holds parameters for textDocument/references.
+type ReferenceParams struct {
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+	Position     Position               `json:"position"`
+	Context      ReferenceContext       `json:"context"`
+}
+
+// ReferenceContext controls what references are returned.
+type ReferenceContext struct {
+	IncludeDeclaration bool `json:"includeDeclaration"`
+}
+
+// HoverParams holds parameters for textDocument/hover.
+type HoverParams struct {
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+	Position     Position               `json:"position"`
+}
+
+// Hover represents hover information.
+type Hover struct {
+	Contents MarkupContent `json:"contents"`
+	Range    *Range        `json:"range,omitempty"`
+}
+
+// MarkupContent represents documentation content.
+type MarkupContent struct {
+	Kind  string `json:"kind"`
+	Value string `json:"value"`
+}
+
+// CodeActionParams holds parameters for textDocument/codeAction.
+type CodeActionParams struct {
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+	Range        Range                  `json:"range"`
+	Context      CodeActionContext      `json:"context"`
+}
+
+// CodeActionContext carries code action request context.
+type CodeActionContext struct {
+	Diagnostics []Diagnostic `json:"diagnostics"`
+}
+
+// CodeAction represents a code action.
+type CodeAction struct {
+	Title       string         `json:"title"`
+	Kind        string         `json:"kind,omitempty"`
+	Diagnostics []Diagnostic   `json:"diagnostics,omitempty"`
+	Edit        *WorkspaceEdit `json:"edit,omitempty"`
+}
+
+// WorkspaceEdit represents changes to workspace resources.
+type WorkspaceEdit struct {
+	Changes map[string][]TextEdit `json:"changes"`
+}
+
+// TextEdit represents a text edit.
+type TextEdit struct {
+	Range   Range  `json:"range"`
+	NewText string `json:"newText"`
+}
+
+// CompletionParams holds parameters for textDocument/completion.
+type CompletionParams struct {
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+	Position     Position               `json:"position"`
+}
+
+// CompletionItem represents a completion suggestion.
+type CompletionItem struct {
+	Label         string `json:"label"`
+	Kind          int    `json:"kind,omitempty"`
+	Detail        string `json:"detail,omitempty"`
+	Documentation string `json:"documentation,omitempty"`
+	InsertText    string `json:"insertText,omitempty"`
+}
+
+// Completion kind constants.
+const (
+	CompletionKindText     = 1
+	CompletionKindProperty = 10
+	CompletionKindValue    = 12
+	CompletionKindEnum     = 13
+	CompletionKindKeyword  = 14
+)
+
+// CompletionList represents a list of completion items.
+type CompletionList struct {
+	IsIncomplete bool             `json:"isIncomplete"`
+	Items        []CompletionItem `json:"items"`
+}
+
+// DocumentFormattingParams holds parameters for textDocument/formatting.
+type DocumentFormattingParams struct {
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+	Options      FormattingOptions      `json:"options"`
+}
+
+// FormattingOptions describes formatting options.
+type FormattingOptions struct {
+	TabSize      int  `json:"tabSize"`
+	InsertSpaces bool `json:"insertSpaces"`
 }

@@ -20,6 +20,14 @@ const (
 	MethodDidChange          = "textDocument/didChange"
 	MethodDidClose           = "textDocument/didClose"
 	MethodPublishDiagnostics = "textDocument/publishDiagnostics"
+	MethodDocumentLink       = "textDocument/documentLink"
+	MethodDocumentSymbol     = "textDocument/documentSymbol"
+	MethodDefinition         = "textDocument/definition"
+	MethodReferences         = "textDocument/references"
+	MethodHover              = "textDocument/hover"
+	MethodCodeAction         = "textDocument/codeAction"
+	MethodCompletion         = "textDocument/completion"
+	MethodFormatting         = "textDocument/formatting"
 )
 
 // LSP header constants.

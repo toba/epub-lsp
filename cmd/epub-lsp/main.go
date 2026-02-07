@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"maps"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -36,10 +37,50 @@ var TargetFileExtensions = []string{
 
 // workspaceStore holds the state for a workspace.
 type workspaceStore struct {
+	mu          sync.RWMutex
 	RootPath    string
 	RawFiles    map[string][]byte
 	FileTypes   map[string]epub.FileType
 	Diagnostics map[string][]epub.Diagnostic
+	Manifest    *validator.ManifestInfo
+}
+
+func (s *workspaceStore) GetContent(uri string) []byte {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.RawFiles[uri]
+}
+
+func (s *workspaceStore) GetFileType(uri string) epub.FileType {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.FileTypes[uri]
+}
+
+func (s *workspaceStore) GetManifest() *validator.ManifestInfo {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.Manifest
+}
+
+func (s *workspaceStore) GetDiagnostics(uri string) []epub.Diagnostic {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.Diagnostics[uri]
+}
+
+func (s *workspaceStore) GetAllFiles() map[string][]byte {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	result := make(map[string][]byte, len(s.RawFiles))
+	maps.Copy(result, s.RawFiles)
+	return result
+}
+
+func (s *workspaceStore) GetRootPath() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.RootPath
 }
 
 func main() {
@@ -163,6 +204,38 @@ func main() {
 		case lsp.MethodDidClose:
 			isRequestResponse = false
 
+		case lsp.MethodDocumentLink:
+			isRequestResponse = true
+			response = lsp.HandleDocumentLink(data, storage)
+
+		case lsp.MethodDocumentSymbol:
+			isRequestResponse = true
+			response = lsp.HandleDocumentSymbol(data, storage)
+
+		case lsp.MethodDefinition:
+			isRequestResponse = true
+			response = lsp.HandleDefinition(data, storage)
+
+		case lsp.MethodReferences:
+			isRequestResponse = true
+			response = lsp.HandleReferences(data, storage)
+
+		case lsp.MethodHover:
+			isRequestResponse = true
+			response = lsp.HandleHover(data, storage)
+
+		case lsp.MethodCodeAction:
+			isRequestResponse = true
+			response = lsp.HandleCodeAction(data, storage)
+
+		case lsp.MethodCompletion:
+			isRequestResponse = true
+			response = lsp.HandleCompletion(data, storage)
+
+		case lsp.MethodFormatting:
+			isRequestResponse = true
+			response = lsp.HandleFormatting(data, storage)
+
 		default:
 			isRequestResponse = false
 		}
@@ -230,7 +303,9 @@ func processDiagnosticNotification(
 		return
 	}
 
+	storage.mu.Lock()
 	storage.RootPath = uriToFilePath(rootPath)
+	storage.mu.Unlock()
 
 	notification := &lsp.NotificationMessage[lsp.PublishDiagnosticsParams]{
 		JsonRpc: lsp.JSONRPCVersion,
@@ -256,7 +331,6 @@ func processDiagnosticNotification(
 			if !hasTargetExtension(uri) {
 				continue
 			}
-			storage.RawFiles[uri] = content
 			cloneTextFromClient[uri] = content
 		}
 
@@ -270,6 +344,10 @@ func processDiagnosticNotification(
 		if len(cloneTextFromClient) == 0 {
 			continue
 		}
+
+		storage.mu.Lock()
+
+		maps.Copy(storage.RawFiles, cloneTextFromClient)
 
 		// Detect file types and parse OPF manifests
 		opfChanged := false
@@ -292,6 +370,7 @@ func processDiagnosticNotification(
 			if storage.FileTypes[uri] == epub.FileTypeOPF {
 				if m := opf.ParseManifest(content); m != nil {
 					ctx.Manifest = m
+					storage.Manifest = m
 					break
 				}
 			}
@@ -309,6 +388,8 @@ func processDiagnosticNotification(
 				storage.FileTypes[uri] = epub.DetectFileType(uri, content)
 			}
 		}
+
+		storage.mu.Unlock()
 
 		// Validate files concurrently
 		type validationResult struct {
@@ -330,10 +411,12 @@ func processDiagnosticNotification(
 			close(results)
 		}()
 
+		storage.mu.Lock()
 		for r := range results {
 			storage.Diagnostics[r.uri] = r.diags
 			publishDiagnostics(notification, r.uri, r.diags, muStdout)
 		}
+		storage.mu.Unlock()
 	}
 }
 
