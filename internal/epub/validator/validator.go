@@ -59,6 +59,9 @@ type WorkspaceContext struct {
 	Files     map[string][]byte
 	FileTypes map[string]epub.FileType
 	Manifest  *ManifestInfo
+	// AccessibilitySeverity controls accessibility diagnostic severity.
+	// 0 = ignore (skip checks), 1 = error, 2 = warning (default).
+	AccessibilitySeverity int
 }
 
 // Registry holds all registered validators and dispatches validation.

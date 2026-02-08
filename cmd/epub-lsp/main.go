@@ -43,6 +43,7 @@ type workspaceStore struct {
 	FileTypes   map[string]epub.FileType
 	Diagnostics map[string][]epub.Diagnostic
 	Manifest    *validator.ManifestInfo
+	Settings    *lsp.ServerSettings
 }
 
 func (s *workspaceStore) GetContent(uri string) []byte {
@@ -81,6 +82,12 @@ func (s *workspaceStore) GetRootPath() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.RootPath
+}
+
+func (s *workspaceStore) GetSettings() *lsp.ServerSettings {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.Settings
 }
 
 func main() {
@@ -162,11 +169,15 @@ func main() {
 		switch request.Method {
 		case lsp.MethodInitialize:
 			var rootURI string
-			response, rootURI = lsp.ProcessInitializeRequest(
+			var settings *lsp.ServerSettings
+			response, rootURI, settings = lsp.ProcessInitializeRequest(
 				data,
 				serverName,
 				version,
 			)
+			storage.mu.Lock()
+			storage.Settings = settings
+			storage.mu.Unlock()
 			notifyTheRootPath(rootPathNotification, rootURI)
 			rootPathNotification = nil
 			isRequestResponse = true
@@ -235,6 +246,10 @@ func main() {
 		case lsp.MethodFormatting:
 			isRequestResponse = true
 			response = lsp.HandleFormatting(data, storage)
+
+		case lsp.MethodSemanticTokensFull:
+			isRequestResponse = true
+			response = lsp.HandleSemanticTokens(data, storage)
 
 		default:
 			isRequestResponse = false
@@ -361,9 +376,10 @@ func processDiagnosticNotification(
 
 		// Update manifest info from any OPF files
 		ctx := &validator.WorkspaceContext{
-			RootPath:  storage.RootPath,
-			Files:     storage.RawFiles,
-			FileTypes: storage.FileTypes,
+			RootPath:              storage.RootPath,
+			Files:                 storage.RawFiles,
+			FileTypes:             storage.FileTypes,
+			AccessibilitySeverity: accessibilitySeverity(storage.Settings),
 		}
 
 		for uri, content := range storage.RawFiles {
@@ -542,6 +558,22 @@ func createLogFile() *os.File {
 	}
 
 	return file
+}
+
+// accessibilitySeverity maps the settings string to an epub severity constant.
+// Returns SeverityWarning as default, 0 for "ignore", SeverityError for "error".
+func accessibilitySeverity(settings *lsp.ServerSettings) int {
+	if settings == nil {
+		return epub.SeverityWarning
+	}
+	switch settings.Accessibility {
+	case "ignore":
+		return 0
+	case "error":
+		return epub.SeverityError
+	default:
+		return epub.SeverityWarning
+	}
 }
 
 // intToUint safely converts int to uint, returning 0 for negative values.

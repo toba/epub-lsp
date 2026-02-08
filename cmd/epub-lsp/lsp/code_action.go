@@ -3,11 +3,23 @@ package lsp
 import (
 	"encoding/json"
 	"log/slog"
+	"slices"
 	"strings"
 
 	"github.com/toba/epub-lsp/internal/epub"
 	"github.com/toba/epub-lsp/internal/epub/parser"
 )
+
+// autoFixableCodes lists diagnostic codes that can be batch-fixed via source.fixAll.
+var autoFixableCodes = map[string]bool{
+	"metadata-accessmode":           true,
+	"metadata-accessmodesufficient": true,
+	"metadata-accessibilityfeature": true,
+	"metadata-accessibilityhazard":  true,
+	"metadata-accessibilitysummary": true,
+	"HTM_008":                       true,
+	"epub-type-has-matching-role":   true,
+}
 
 // HandleCodeAction processes textDocument/codeAction requests.
 func HandleCodeAction(data []byte, ws WorkspaceReader) []byte {
@@ -21,6 +33,11 @@ func HandleCodeAction(data []byte, ws WorkspaceReader) []byte {
 	content := ws.GetContent(uri)
 	if content == nil {
 		return marshalResponse(req.Id, []CodeAction{})
+	}
+
+	if slices.Contains(req.Params.Context.Only, "source.fixAll") {
+		actions := handleFixAll(uri, content, ws)
+		return marshalResponse(req.Id, actions)
 	}
 
 	var actions []CodeAction
@@ -39,30 +56,82 @@ func HandleCodeAction(data []byte, ws WorkspaceReader) []byte {
 	return marshalResponse(req.Id, actions)
 }
 
+func handleFixAll(uri string, content []byte, ws WorkspaceReader) []CodeAction {
+	storedDiags := ws.GetDiagnostics(uri)
+	if len(storedDiags) == 0 {
+		return nil
+	}
+
+	var edits []TextEdit
+	var fixedDiags []Diagnostic
+
+	for _, d := range storedDiags {
+		if !autoFixableCodes[d.Code] {
+			continue
+		}
+		lspDiag := Diagnostic{
+			Range: Range{
+				Start: Position{
+					Line:      intToUint(d.Range.Start.Line),
+					Character: intToUint(d.Range.Start.Character),
+				},
+				End: Position{
+					Line:      intToUint(d.Range.End.Line),
+					Character: intToUint(d.Range.End.Character),
+				},
+			},
+			Message:  d.Message,
+			Severity: d.Severity,
+			Code:     d.Code,
+			Source:   d.Source,
+		}
+		action := codeActionForDiagnostic(uri, content, &lspDiag)
+		if action == nil || action.Edit == nil {
+			continue
+		}
+		for _, fileEdits := range action.Edit.Changes {
+			edits = append(edits, fileEdits...)
+		}
+		fixedDiags = append(fixedDiags, lspDiag)
+	}
+
+	if len(edits) == 0 {
+		return nil
+	}
+
+	return []CodeAction{
+		{
+			Title:       "Fix all auto-fixable issues",
+			Kind:        "source.fixAll",
+			Diagnostics: fixedDiags,
+			Edit: &WorkspaceEdit{
+				Changes: map[string][]TextEdit{
+					uri: edits,
+				},
+			},
+		},
+	}
+}
+
 func codeActionForDiagnostic(uri string, content []byte, diag *Diagnostic) *CodeAction {
 	switch diag.Code {
-	case "ACC_001":
-		// Missing accessMode metadata
+	case "metadata-accessmode":
 		return insertMetaAction(uri, content, diag,
 			"Add schema:accessMode metadata",
 			`<meta property="schema:accessMode">textual</meta>`)
-	case "ACC_002":
-		// Missing accessModeSufficient
+	case "metadata-accessmodesufficient":
 		return insertMetaAction(uri, content, diag,
 			"Add schema:accessModeSufficient metadata",
 			`<meta property="schema:accessModeSufficient">textual</meta>`)
-	case "ACC_003":
-		// Missing accessibilityFeature
+	case "metadata-accessibilityfeature":
 		return insertMetaAction(uri, content, diag,
 			"Add schema:accessibilityFeature metadata",
 			`<meta property="schema:accessibilityFeature">structuralNavigation</meta>`)
-	case "ACC_004":
-		// Missing accessibilityHazard
+	case "metadata-accessibilityhazard":
 		return insertMetaAction(uri, content, diag,
 			"Add schema:accessibilityHazard metadata",
 			`<meta property="schema:accessibilityHazard">none</meta>`)
-	case "ACC_005":
-		// Missing accessibilitySummary
+	case "metadata-accessibilitysummary":
 		return insertMetaAction(
 			uri,
 			content,
@@ -70,12 +139,12 @@ func codeActionForDiagnostic(uri string, content []byte, diag *Diagnostic) *Code
 			"Add schema:accessibilitySummary metadata",
 			`<meta property="schema:accessibilitySummary">This publication meets WCAG 2.0 Level AA.</meta>`,
 		)
-	case "HTM_004":
+	case "HTM_008":
 		// Missing alt attribute on img
 		return addAttributeAction(uri, content, diag,
 			"Add alt attribute",
 			"alt", `""`)
-	case "HTM_046":
+	case "epub-type-has-matching-role":
 		// Missing role attribute
 		return addRoleAction(uri, content, diag)
 	}

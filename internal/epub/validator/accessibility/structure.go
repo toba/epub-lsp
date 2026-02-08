@@ -63,8 +63,12 @@ func (v *StructureValidator) FileTypes() []epub.FileType {
 func (v *StructureValidator) Validate(
 	_ string,
 	content []byte,
-	_ *validator.WorkspaceContext,
+	ctx *validator.WorkspaceContext,
 ) []epub.Diagnostic {
+	if ctx != nil && ctx.AccessibilitySeverity == 0 {
+		return nil
+	}
+
 	root, xmlDiags := parser.Parse(content)
 	if len(xmlDiags) > 0 {
 		return nil
@@ -76,6 +80,12 @@ func (v *StructureValidator) Validate(
 	diags = append(diags, checkHeadingLevels(content, root)...)
 	diags = append(diags, checkTableCaptions(content, root)...)
 	diags = append(diags, checkFormLabels(content, root)...)
+
+	if ctx != nil && ctx.AccessibilitySeverity != 0 {
+		for i := range diags {
+			diags[i].Severity = ctx.AccessibilitySeverity
+		}
+	}
 
 	return diags
 }

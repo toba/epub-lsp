@@ -16,6 +16,7 @@ type mockWorkspace struct {
 	diagnostics map[string][]epub.Diagnostic
 	manifest    *validator.ManifestInfo
 	rootPath    string
+	settings    *ServerSettings
 }
 
 func (m *mockWorkspace) GetContent(
@@ -36,7 +37,8 @@ func (m *mockWorkspace) GetDiagnostics(
 ) []epub.Diagnostic {
 	return m.diagnostics[uri]
 }
-func (m *mockWorkspace) GetRootPath() string { return m.rootPath }
+func (m *mockWorkspace) GetRootPath() string          { return m.rootPath }
+func (m *mockWorkspace) GetSettings() *ServerSettings { return m.settings }
 func (m *mockWorkspace) GetAllFiles() map[string][]byte {
 	result := make(map[string][]byte, len(m.files))
 	maps.Copy(result, m.files)

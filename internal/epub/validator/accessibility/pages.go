@@ -26,6 +26,9 @@ func (v *PageValidator) Validate(
 	if ctx == nil || ctx.Manifest == nil {
 		return nil
 	}
+	if ctx.AccessibilitySeverity == 0 {
+		return nil
+	}
 
 	_, metadata := opf.ParseOPFMetadata(content)
 	if metadata == nil {
@@ -79,6 +82,12 @@ func (v *PageValidator) Validate(
 
 	// Check page-list references point to existing element IDs
 	diags = append(diags, checkPageListReferences(content, rng, ctx)...)
+
+	if ctx.AccessibilitySeverity != 0 {
+		for i := range diags {
+			diags[i].Severity = ctx.AccessibilitySeverity
+		}
+	}
 
 	return diags
 }

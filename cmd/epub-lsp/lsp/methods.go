@@ -18,6 +18,7 @@ type WorkspaceReader interface {
 	GetDiagnostics(uri string) []epub.Diagnostic
 	GetAllFiles() map[string][]byte
 	GetRootPath() string
+	GetSettings() *ServerSettings
 }
 
 // ID represents a JSON-RPC request ID that can be either a string or number.
@@ -72,13 +73,19 @@ type NotificationMessage[T any] struct {
 	Params  T      `json:"params"`
 }
 
+// ServerSettings holds configuration options sent by the editor.
+type ServerSettings struct {
+	Accessibility string `json:"accessibility"`
+}
+
 // InitializeParams holds parameters for the initialize request.
 type InitializeParams struct {
-	ProcessId        int            `json:"processId"`
-	Capabilities     map[string]any `json:"capabilities"`
-	ClientInfo       ClientInfo     `json:"clientInfo"`
-	RootUri          string         `json:"rootUri"`
-	WorkspaceFolders any            `json:"workspaceFolders"`
+	ProcessId             int             `json:"processId"`
+	Capabilities          map[string]any  `json:"capabilities"`
+	ClientInfo            ClientInfo      `json:"clientInfo"`
+	RootUri               string          `json:"rootUri"`
+	WorkspaceFolders      any             `json:"workspaceFolders"`
+	InitializationOptions *ServerSettings `json:"initializationOptions"`
 }
 
 // ClientInfo describes the connecting editor.
@@ -87,18 +94,61 @@ type ClientInfo struct {
 	Version string `json:"version"`
 }
 
+// CodeActionOptions describes code action capabilities.
+type CodeActionOptions struct {
+	CodeActionKinds []string `json:"codeActionKinds,omitempty"`
+}
+
 // ServerCapabilities describes the capabilities this server supports.
 type ServerCapabilities struct {
-	TextDocumentSync           int                `json:"textDocumentSync"`
-	DocumentLinkProvider       bool               `json:"documentLinkProvider,omitempty"`
-	DocumentSymbolProvider     bool               `json:"documentSymbolProvider,omitempty"`
-	DefinitionProvider         bool               `json:"definitionProvider,omitempty"`
-	ReferencesProvider         bool               `json:"referencesProvider,omitempty"`
-	HoverProvider              bool               `json:"hoverProvider,omitempty"`
-	CodeActionProvider         bool               `json:"codeActionProvider,omitempty"`
-	CompletionProvider         *CompletionOptions `json:"completionProvider,omitempty"`
-	DocumentFormattingProvider bool               `json:"documentFormattingProvider,omitempty"`
+	TextDocumentSync           int                    `json:"textDocumentSync"`
+	DocumentLinkProvider       bool                   `json:"documentLinkProvider,omitempty"`
+	DocumentSymbolProvider     bool                   `json:"documentSymbolProvider,omitempty"`
+	DefinitionProvider         bool                   `json:"definitionProvider,omitempty"`
+	ReferencesProvider         bool                   `json:"referencesProvider,omitempty"`
+	HoverProvider              bool                   `json:"hoverProvider,omitempty"`
+	CodeActionProvider         *CodeActionOptions     `json:"codeActionProvider,omitempty"`
+	CompletionProvider         *CompletionOptions     `json:"completionProvider,omitempty"`
+	DocumentFormattingProvider bool                   `json:"documentFormattingProvider,omitempty"`
+	SemanticTokensProvider     *SemanticTokensOptions `json:"semanticTokensProvider,omitempty"`
 }
+
+// SemanticTokensLegend describes the token types and modifiers used by semantic tokens.
+type SemanticTokensLegend struct {
+	TokenTypes     []string `json:"tokenTypes"`
+	TokenModifiers []string `json:"tokenModifiers"`
+}
+
+// SemanticTokensOptions describes semantic token capabilities.
+type SemanticTokensOptions struct {
+	Legend SemanticTokensLegend `json:"legend"`
+	Full   bool                 `json:"full"`
+}
+
+// SemanticTokensParams holds parameters for textDocument/semanticTokens/full.
+type SemanticTokensParams struct {
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+}
+
+// SemanticTokensResult holds the encoded semantic tokens.
+type SemanticTokensResult struct {
+	Data []uint `json:"data"`
+}
+
+// SemanticTokenTypes defines the token type legend for Go template syntax.
+var SemanticTokenTypes = []string{
+	"keyword",  // 0
+	"variable", // 1
+	"function", // 2
+	"property", // 3
+	"string",   // 4
+	"number",   // 5
+	"operator", // 6
+	"comment",  // 7
+}
+
+// SemanticTokenModifiers defines the token modifier legend (currently empty).
+var SemanticTokenModifiers = []string{}
 
 // CompletionOptions describes completion capabilities.
 type CompletionOptions struct {
@@ -161,7 +211,7 @@ type TextDocumentIdentifier struct {
 func ProcessInitializeRequest(
 	data []byte,
 	lspName, lspVersion string,
-) (response []byte, rootURI string) {
+) (response []byte, rootURI string, settings *ServerSettings) {
 	req := RequestMessage[InitializeParams]{}
 
 	err := json.Unmarshal(data, &req)
@@ -182,11 +232,20 @@ func ProcessInitializeRequest(
 				DefinitionProvider:     true,
 				ReferencesProvider:     true,
 				HoverProvider:          true,
-				CodeActionProvider:     true,
+				CodeActionProvider: &CodeActionOptions{
+					CodeActionKinds: []string{"quickfix", "source.fixAll"},
+				},
 				CompletionProvider: &CompletionOptions{
 					TriggerCharacters: []string{"<", "\"", ":", " "},
 				},
 				DocumentFormattingProvider: true,
+				SemanticTokensProvider: &SemanticTokensOptions{
+					Legend: SemanticTokensLegend{
+						TokenTypes:     SemanticTokenTypes,
+						TokenModifiers: SemanticTokenModifiers,
+					},
+					Full: true,
+				},
 			},
 			ServerInfo: ServerInfo{
 				Name:    lspName,
@@ -202,7 +261,7 @@ func ProcessInitializeRequest(
 		panic(msg)
 	}
 
-	return response, req.Params.RootUri
+	return response, req.Params.RootUri, req.Params.InitializationOptions
 }
 
 // ProcessShutdownRequest handles the shutdown request.
@@ -410,6 +469,7 @@ type CodeActionParams struct {
 // CodeActionContext carries code action request context.
 type CodeActionContext struct {
 	Diagnostics []Diagnostic `json:"diagnostics"`
+	Only        []string     `json:"only,omitempty"`
 }
 
 // CodeAction represents a code action.

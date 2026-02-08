@@ -17,8 +17,12 @@ func (v *OPFAccessibilityValidator) FileTypes() []epub.FileType {
 func (v *OPFAccessibilityValidator) Validate(
 	_ string,
 	content []byte,
-	_ *validator.WorkspaceContext,
+	ctx *validator.WorkspaceContext,
 ) []epub.Diagnostic {
+	if ctx != nil && ctx.AccessibilitySeverity == 0 {
+		return nil
+	}
+
 	_, metadata := opf.ParseOPFMetadata(content)
 	if metadata == nil {
 		return nil
@@ -50,6 +54,12 @@ func (v *OPFAccessibilityValidator) Validate(
 			Source:   source,
 			Range:    rng,
 		})
+	}
+
+	if ctx != nil && ctx.AccessibilitySeverity != 0 {
+		for i := range diags {
+			diags[i].Severity = ctx.AccessibilitySeverity
+		}
 	}
 
 	return diags

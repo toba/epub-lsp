@@ -64,13 +64,22 @@ func (v *MetadataValidator) FileTypes() []epub.FileType {
 func (v *MetadataValidator) Validate(
 	_ string,
 	content []byte,
-	_ *validator.WorkspaceContext,
+	ctx *validator.WorkspaceContext,
 ) []epub.Diagnostic {
+	if ctx != nil && ctx.AccessibilitySeverity == 0 {
+		return nil
+	}
 	_, metadata := opf.ParseOPFMetadata(content)
 	if metadata == nil {
 		return nil
 	}
-	return validateAccessibilityMetadata(content, metadata)
+	diags := validateAccessibilityMetadata(content, metadata)
+	if ctx != nil && ctx.AccessibilitySeverity != 0 {
+		for i := range diags {
+			diags[i].Severity = ctx.AccessibilitySeverity
+		}
+	}
+	return diags
 }
 
 func validateAccessibilityMetadata(

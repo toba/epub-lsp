@@ -28,6 +28,7 @@ const (
 	MethodCodeAction         = "textDocument/codeAction"
 	MethodCompletion         = "textDocument/completion"
 	MethodFormatting         = "textDocument/formatting"
+	MethodSemanticTokensFull = "textDocument/semanticTokens/full"
 )
 
 // LSP header constants.

@@ -8,6 +8,9 @@ import (
 	"github.com/toba/epub-lsp/internal/epub/validator"
 )
 
+// defaultSeverity provides the default accessibility severity for tests.
+const defaultSeverity = epub.SeverityWarning
+
 func makeOPFWithFeature(feature string) []byte {
 	return []byte(`<?xml version="1.0" encoding="UTF-8"?>
 <package xmlns="http://www.idpf.org/2007/opf" unique-identifier="uid" version="3.0">
@@ -69,6 +72,7 @@ func TestPageValidator_PrintPageNumbers_NoPageList(t *testing.T) {
 			"file:///book/OEBPS/package.opf": epub.FileTypeOPF,
 			"file:///book/OEBPS/ch1.xhtml":   epub.FileTypeXHTML,
 		},
+		AccessibilitySeverity: defaultSeverity,
 	}
 
 	v := &PageValidator{}
@@ -102,6 +106,7 @@ func TestPageValidator_PrintPageNumbers_NoPageBreaks(t *testing.T) {
 			"file:///book/OEBPS/nav.xhtml":   epub.FileTypeNav,
 			"file:///book/OEBPS/ch1.xhtml":   epub.FileTypeXHTML,
 		},
+		AccessibilitySeverity: defaultSeverity,
 	}
 
 	v := &PageValidator{}
@@ -130,6 +135,7 @@ func TestPageValidator_PrintPageNumbers_AllPresent(t *testing.T) {
 			"file:///book/OEBPS/nav.xhtml":   epub.FileTypeNav,
 			"file:///book/OEBPS/ch1.xhtml":   epub.FileTypeXHTML,
 		},
+		AccessibilitySeverity: defaultSeverity,
 	}
 
 	v := &PageValidator{}
@@ -162,6 +168,7 @@ func TestPageValidator_PageListWithoutDCSource(t *testing.T) {
 			"file:///book/OEBPS/package.opf": epub.FileTypeOPF,
 			"file:///book/OEBPS/nav.xhtml":   epub.FileTypeNav,
 		},
+		AccessibilitySeverity: defaultSeverity,
 	}
 
 	v := &PageValidator{}
@@ -200,6 +207,7 @@ func TestPageValidator_BrokenPageListRef(t *testing.T) {
 			"file:///book/OEBPS/nav.xhtml":   epub.FileTypeNav,
 			"file:///book/OEBPS/ch1.xhtml":   epub.FileTypeXHTML,
 		},
+		AccessibilitySeverity: defaultSeverity,
 	}
 
 	v := &PageValidator{}
