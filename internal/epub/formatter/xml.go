@@ -6,7 +6,14 @@ import (
 	"encoding/xml"
 	"errors"
 	"io"
+	"regexp"
 	"strings"
+)
+
+var (
+	tmplBlockRe = regexp.MustCompile(`\{\{-?\s*(if|range|with|define|block)\b`)
+	tmplElseRe  = regexp.MustCompile(`\{\{-?\s*else\b`)
+	tmplEndRe   = regexp.MustCompile(`\{\{-?\s*end\b`)
 )
 
 type xmlTokenKind int
@@ -305,10 +312,43 @@ func formatTokens(tokens []xmlToken, indent string) string {
 
 		case tokCharData:
 			text := strings.TrimSpace(tok.raw)
-			if text != "" {
-				writeIndent(&buf, indent, depth)
-				buf.WriteString(text)
-				buf.WriteByte('\n')
+			if text == "" {
+				continue
+			}
+			lines := strings.Split(tok.raw, "\n")
+			for _, line := range lines {
+				trimmed := strings.TrimSpace(line)
+				if trimmed == "" {
+					continue
+				}
+				switch {
+				case tmplEndRe.MatchString(trimmed):
+					depth--
+					if depth < 0 {
+						depth = 0
+					}
+					writeIndent(&buf, indent, depth)
+					buf.WriteString(trimmed)
+					buf.WriteByte('\n')
+				case tmplElseRe.MatchString(trimmed):
+					depth--
+					if depth < 0 {
+						depth = 0
+					}
+					writeIndent(&buf, indent, depth)
+					buf.WriteString(trimmed)
+					buf.WriteByte('\n')
+					depth++
+				case tmplBlockRe.MatchString(trimmed):
+					writeIndent(&buf, indent, depth)
+					buf.WriteString(trimmed)
+					buf.WriteByte('\n')
+					depth++
+				default:
+					writeIndent(&buf, indent, depth)
+					buf.WriteString(trimmed)
+					buf.WriteByte('\n')
+				}
 			}
 		}
 	}

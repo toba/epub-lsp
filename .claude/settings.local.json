@@ -61,7 +61,8 @@
       "Bash(PUSH=true .claude/skills/commit/commit.sh:*)",
       "Bash(/tmp/epub-lsp-test)",
       "Bash(python3:*)",
-      "Bash(printf:*)"
+      "Bash(printf:*)",
+      "Bash(PUSH=true NEW_VERSION=v0.4.0 .claude/skills/commit/commit.sh:*)"
     ]
   },
   "hooks": {

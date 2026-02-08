@@ -171,6 +171,117 @@ func TestFormatXML_Comment(t *testing.T) {
 	}
 }
 
+func TestFormatXML_TemplateBlockIndentation(t *testing.T) {
+	input := []byte(
+		`<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml"><body><section>
+{{- if .Title}}
+<h1>{{.Title}}</h1>
+{{- end}}
+</section></body></html>`,
+	)
+
+	result, err := FormatXML(input, "   ")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	expected := `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+   <body>
+      <section>
+         {{- if .Title}}
+            <h1>{{.Title}}</h1>
+         {{- end}}
+      </section>
+   </body>
+</html>
+`
+	if result != expected {
+		t.Errorf(
+			"template block indentation mismatch\nexpected:\n%s\ngot:\n%s",
+			expected,
+			result,
+		)
+	}
+}
+
+func TestFormatXML_TemplateElseBlock(t *testing.T) {
+	input := []byte(`<root>
+{{- if .Foo}}
+<p>yes</p>
+{{- else}}
+<p>no</p>
+{{- end}}
+</root>`)
+
+	result, err := FormatXML(input, "   ")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	expected := `<root>
+   {{- if .Foo}}
+      <p>yes</p>
+   {{- else}}
+      <p>no</p>
+   {{- end}}
+</root>
+`
+	if result != expected {
+		t.Errorf(
+			"template else block mismatch\nexpected:\n%s\ngot:\n%s",
+			expected,
+			result,
+		)
+	}
+}
+
+func TestFormatXML_TemplateNestedBlocks(t *testing.T) {
+	input := []byte(`<root>
+{{- if .Outer}}
+{{- range .Items}}
+<p>{{.Name}}</p>
+{{- end}}
+{{- end}}
+</root>`)
+
+	result, err := FormatXML(input, "   ")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	expected := `<root>
+   {{- if .Outer}}
+      {{- range .Items}}
+         <p>{{.Name}}</p>
+      {{- end}}
+   {{- end}}
+</root>
+`
+	if result != expected {
+		t.Errorf(
+			"nested template blocks mismatch\nexpected:\n%s\ngot:\n%s",
+			expected,
+			result,
+		)
+	}
+}
+
+func TestFormatXML_TemplateInlineExpression(t *testing.T) {
+	input := []byte(`<root><p>Hello {{.Name}}</p></root>`)
+
+	result, err := FormatXML(input, "   ")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Inline expressions within an inline element should stay inline
+	if !strings.Contains(result, "<p>Hello {{.Name}}</p>") {
+		t.Errorf("expected inline template expression to be preserved\n%s", result)
+	}
+}
+
 func TestFormatXML_SelfClosingPreserved(t *testing.T) {
 	input := []byte(`<root><br/><hr/><img src="test.png"/></root>`)
 	result, err := FormatXML(input, "  ")
