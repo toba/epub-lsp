@@ -94,6 +94,9 @@ type ClientInfo struct {
 	Version string `json:"version"`
 }
 
+// DocumentLinkOptions describes document link capabilities.
+type DocumentLinkOptions struct{}
+
 // CodeActionOptions describes code action capabilities.
 type CodeActionOptions struct {
 	CodeActionKinds []string `json:"codeActionKinds,omitempty"`
@@ -102,7 +105,7 @@ type CodeActionOptions struct {
 // ServerCapabilities describes the capabilities this server supports.
 type ServerCapabilities struct {
 	TextDocumentSync           int                    `json:"textDocumentSync"`
-	DocumentLinkProvider       bool                   `json:"documentLinkProvider,omitempty"`
+	DocumentLinkProvider       *DocumentLinkOptions   `json:"documentLinkProvider,omitempty"`
 	DocumentSymbolProvider     bool                   `json:"documentSymbolProvider,omitempty"`
 	DefinitionProvider         bool                   `json:"definitionProvider,omitempty"`
 	ReferencesProvider         bool                   `json:"referencesProvider,omitempty"`
@@ -227,7 +230,7 @@ func ProcessInitializeRequest(
 		Result: InitializeResult{
 			Capabilities: ServerCapabilities{
 				TextDocumentSync:       TextDocumentSyncFull,
-				DocumentLinkProvider:   true,
+				DocumentLinkProvider:   &DocumentLinkOptions{},
 				DocumentSymbolProvider: true,
 				DefinitionProvider:     true,
 				ReferencesProvider:     true,
