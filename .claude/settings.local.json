@@ -58,7 +58,10 @@
       "Bash(gh repo create:*)",
       "Bash(PUSH=true NEW_VERSION=v0.2.0 /Users/jason/Developer/toba/epub-lsp/.claude/skills/commit/commit.sh:*)",
       "Bash(gh issue view:*)",
-      "Bash(PUSH=true .claude/skills/commit/commit.sh:*)"
+      "Bash(PUSH=true .claude/skills/commit/commit.sh:*)",
+      "Bash(/tmp/epub-lsp-test)",
+      "Bash(python3:*)",
+      "Bash(printf:*)"
     ]
   },
   "hooks": {
