@@ -265,9 +265,8 @@ func main() {
 	}
 
 	if scanner.Err() != nil {
-		msg := "error while closing LSP: " + scanner.Err().Error()
-		slog.Error(msg)
-		panic(msg)
+		slog.Error("error while closing LSP", "err", scanner.Err())
+		panic("error while closing LSP: " + scanner.Err().Error())
 	}
 }
 

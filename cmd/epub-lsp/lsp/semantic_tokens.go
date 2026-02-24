@@ -155,7 +155,10 @@ func tokenizeTemplates(content []byte) []semanticToken {
 			2)
 		oLine, oChar := byteOffsetToLineChar(content, block.delimStart)
 		tokens = append(tokens, semanticToken{
-			line: oLine, startChar: oChar, length: uint(openLen), tokenType: tokenOperator, //nolint:gosec // openLen >= 2
+			line:      oLine,
+			startChar: oChar,
+			length:    uint(openLen),
+			tokenType: tokenOperator, //nolint:gosec // openLen >= 2
 		})
 
 		// Tokenize inner content
@@ -169,7 +172,10 @@ func tokenizeTemplates(content []byte) []semanticToken {
 		closeLen := block.delimEnd - closeStart
 		cLine, cChar := byteOffsetToLineChar(content, closeStart)
 		tokens = append(tokens, semanticToken{
-			line: cLine, startChar: cChar, length: uint(closeLen), tokenType: tokenOperator, //nolint:gosec // closeLen >= 2
+			line:      cLine,
+			startChar: cChar,
+			length:    uint(max(closeLen, 0)), //nolint:gosec // closeLen >= 2
+			tokenType: tokenOperator,
 		})
 	}
 
@@ -210,7 +216,10 @@ func tokenizeInner(
 			}
 			line, char := byteOffsetToLineChar(content, baseOffset+start)
 			tokens = append(tokens, semanticToken{
-				line: line, startChar: char, length: uint(i - start), tokenType: tokenString, //nolint:gosec // i >= start
+				line:      line,
+				startChar: char,
+				length:    uint(max(i-start, 0)), //nolint:gosec // i >= start
+				tokenType: tokenString,
 			})
 			continue
 		}
@@ -223,7 +232,10 @@ func tokenizeInner(
 			}
 			line, char := byteOffsetToLineChar(content, baseOffset+start)
 			tokens = append(tokens, semanticToken{
-				line: line, startChar: char, length: uint(i - start), tokenType: tokenNumber, //nolint:gosec // i >= start
+				line:      line,
+				startChar: char,
+				length:    uint(max(i-start, 0)), //nolint:gosec // i >= start
+				tokenType: tokenNumber,
 			})
 			continue
 		}
@@ -246,7 +258,10 @@ func tokenizeInner(
 			}
 			line, char := byteOffsetToLineChar(content, baseOffset+start)
 			tokens = append(tokens, semanticToken{
-				line: line, startChar: char, length: uint(i - start), tokenType: tokenOperator, //nolint:gosec // i >= start
+				line:      line,
+				startChar: char,
+				length:    uint(max(i-start, 0)), //nolint:gosec // i >= start
+				tokenType: tokenOperator,
 			})
 			continue
 		}
@@ -270,7 +285,10 @@ func tokenizeInner(
 			}
 			line, char := byteOffsetToLineChar(content, baseOffset+start)
 			tokens = append(tokens, semanticToken{
-				line: line, startChar: char, length: uint(i - start), tokenType: tokenVariable, //nolint:gosec // i >= start
+				line:      line,
+				startChar: char,
+				length:    uint(max(i-start, 0)), //nolint:gosec // i >= start
+				tokenType: tokenVariable,
 			})
 			continue
 		}
@@ -285,7 +303,10 @@ func tokenizeInner(
 				}
 				line, char := byteOffsetToLineChar(content, baseOffset+start)
 				tokens = append(tokens, semanticToken{
-					line: line, startChar: char, length: uint(i - start), tokenType: tokenProperty, //nolint:gosec // i >= start
+					line:      line,
+					startChar: char,
+					length:    uint(max(i-start, 0)), //nolint:gosec // i >= start
+					tokenType: tokenProperty,
 				})
 				continue
 			}
@@ -313,7 +334,10 @@ func tokenizeInner(
 
 			line, char := byteOffsetToLineChar(content, baseOffset+start)
 			tokens = append(tokens, semanticToken{
-				line: line, startChar: char, length: uint(len(word)), tokenType: tokenType,
+				line:      line,
+				startChar: char,
+				length:    uint(len(word)),
+				tokenType: tokenType,
 			})
 			continue
 		}
