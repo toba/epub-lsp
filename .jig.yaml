@@ -1,5 +1,4 @@
-companions:
-  zed: toba/gubby
+zed_extension: toba/gubby
 todo:
   default_status: draft
   default_type: task
