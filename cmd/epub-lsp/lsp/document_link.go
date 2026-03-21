@@ -9,6 +9,7 @@ import (
 
 	"github.com/toba/epub-lsp/internal/epub"
 	"github.com/toba/epub-lsp/internal/epub/parser"
+	"github.com/toba/lsp/position"
 )
 
 // HandleDocumentLink processes textDocument/documentLink requests.
@@ -158,12 +159,12 @@ func findAttrValueRange(content []byte, tagOffset int, attrName string) (Range, 
 					endPos := epub.ByteOffsetToPosition(content, valueEnd)
 					return Range{
 						Start: Position{
-							Line:      intToUint(startPos.Line),
-							Character: intToUint(startPos.Character),
+							Line:      position.IntToUint(startPos.Line),
+							Character: position.IntToUint(startPos.Character),
 						},
 						End: Position{
-							Line:      intToUint(endPos.Line),
-							Character: intToUint(endPos.Character),
+							Line:      position.IntToUint(endPos.Line),
+							Character: position.IntToUint(endPos.Character),
 						},
 					}, true
 				}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/toba/epub-lsp/internal/epub"
 	"github.com/toba/epub-lsp/internal/epub/parser"
+	"github.com/toba/lsp/position"
 )
 
 // autoFixableCodes lists diagnostic codes that can be batch-fixed via source.fixAll.
@@ -72,12 +73,12 @@ func handleFixAll(uri string, content []byte, ws WorkspaceReader) []CodeAction {
 		lspDiag := Diagnostic{
 			Range: Range{
 				Start: Position{
-					Line:      intToUint(d.Range.Start.Line),
-					Character: intToUint(d.Range.Start.Character),
+					Line:      position.IntToUint(d.Range.Start.Line),
+					Character: position.IntToUint(d.Range.Start.Character),
 				},
 				End: Position{
-					Line:      intToUint(d.Range.End.Line),
-					Character: intToUint(d.Range.End.Character),
+					Line:      position.IntToUint(d.Range.End.Line),
+					Character: position.IntToUint(d.Range.End.Character),
 				},
 			},
 			Message:  d.Message,

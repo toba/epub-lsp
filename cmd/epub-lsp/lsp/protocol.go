@@ -30,17 +30,3 @@ const (
 	MethodFormatting         = "textDocument/formatting"
 	MethodSemanticTokensFull = "textDocument/semanticTokens/full"
 )
-
-// LSP header constants.
-const (
-	ContentLengthHeader = "Content-Length"
-	HeaderDelimiter     = "\r\n\r\n"
-	LineDelimiter       = "\r\n"
-)
-
-// File and logging constants.
-const (
-	DirPermissions  = 0750
-	FilePermissions = 0600
-	MaxLogFileSize  = 5_000_000 // 5MB
-)

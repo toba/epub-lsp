@@ -7,6 +7,7 @@ import (
 
 	"github.com/toba/epub-lsp/internal/epub"
 	"github.com/toba/epub-lsp/internal/epub/formatter"
+	"github.com/toba/lsp/position"
 )
 
 // HandleFormatting processes textDocument/formatting requests.
@@ -65,8 +66,8 @@ func HandleFormatting(data []byte, ws WorkspaceReader) []byte {
 			Range: Range{
 				Start: Position{Line: 0, Character: 0},
 				End: Position{
-					Line:      intToUint(endPos.Line),
-					Character: intToUint(endPos.Character),
+					Line:      position.IntToUint(endPos.Line),
+					Character: position.IntToUint(endPos.Character),
 				},
 			},
 			NewText: formatted,

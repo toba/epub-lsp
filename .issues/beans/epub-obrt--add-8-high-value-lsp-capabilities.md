@@ -6,6 +6,10 @@ type: epic
 priority: normal
 created_at: 2026-02-07T23:10:51Z
 updated_at: 2026-02-07T23:24:55Z
+sync:
+    github:
+        issue_number: "4"
+        synced_at: "2026-02-24T18:21:37Z"
 ---
 
 Add interactive LSP features: documentLink, documentSymbol, definition, references, hover, codeAction, completion, formatting. Includes shared infrastructure (WorkspaceReader, LocateAtPosition, PositionToByteOffset).

@@ -6,6 +6,10 @@ type: task
 priority: normal
 created_at: 2026-02-07T22:48:39Z
 updated_at: 2026-02-07T22:51:01Z
+sync:
+    github:
+        issue_number: "2"
+        synced_at: "2026-02-24T18:21:37Z"
 ---
 
 Change the epub-lsp commit.sh to reference the gubby Zed extension (sibling repo) instead of gozer when auto-updating the extension version on push+release.

@@ -6,6 +6,10 @@ type: feature
 priority: normal
 created_at: 2026-02-08T07:26:28Z
 updated_at: 2026-02-08T07:29:07Z
+sync:
+    github:
+        issue_number: "6"
+        synced_at: "2026-02-24T18:21:37Z"
 ---
 
 Go template directives in EPUB XHTML files need two fixes:

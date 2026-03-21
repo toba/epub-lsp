@@ -6,6 +6,10 @@ type: bug
 priority: normal
 created_at: 2026-02-08T04:08:51Z
 updated_at: 2026-02-08T07:05:55Z
+sync:
+    github:
+        issue_number: "5"
+        synced_at: "2026-02-24T18:21:37Z"
 ---
 
 The FormatXML function uses Go's encoding/xml.Encoder for output, which has fundamental issues:
